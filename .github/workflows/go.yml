@@ -40,8 +40,6 @@ jobs:
           name: ${{ github.event.inputs.gosqlcleaner }}
           draft: false
           prerelease: false
-          files: |
-            package/linux/*
-            package/windows/*
+          files: GoSqlCleaner
           token: ${{ secrets.GITHUB_TOKEN }}
 
