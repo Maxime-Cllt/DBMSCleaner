@@ -26,7 +26,9 @@ jobs:
 
       # Installer les dépendances Go (go.mod et go.sum doivent être présents)
       - name: Install dependencies
-        run: go mod download
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Build
         run: go build -v .
@@ -39,7 +41,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-             package/linux/*
-             package/windows/*
+            package/linux/*
+            package/windows/*
           token: ${{ secrets.GITHUB_TOKEN }}
 
