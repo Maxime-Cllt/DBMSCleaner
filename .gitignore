@@ -1,0 +1,5 @@
+/docker-compose.yaml
+config.json
+go.sum
+.postgres_data
+.idea
