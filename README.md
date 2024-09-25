@@ -3,6 +3,13 @@
 <h1>DBCleaner</h1>
 </div>
 
+
+<div align="center">
+    <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+    <img src="https://img.shields.io/badge/Database-Cleaner-53a863?style=for-the-badge" alt="Database Cleaner" />
+    <img src="https://img.shields.io/badge/Version-1.0.0-informational?style=for-the-badge" alt="Version" />
+</div>
+
 ## Description
 
 DBCleaner is a program made to be run on the backend of a server or an application to clean the database. It will reduce
@@ -10,6 +17,8 @@ the storage of the database and optimise all tables except system tables. It is 
 database clean and optimised without having to do it manually. It is a great way to keep your database running in the
 best
 conditions possible. Using Go language, it is compatible with all platforms and can be run on any server or application.
+
+Exist in Java version too : <a href="https://github.com/Maxime-Cllt/DBCleaner">DBCleaner</a>
 
 ## Features
 
@@ -70,7 +79,7 @@ You need to create a file named `config.json` in the same directory as the progr
 
 ```json
 {
-  "driver": "mysql", 
+  "driver": "mysql", // {"mysql", "mariadb", "postgres"}
   "host": "localhost",
   "port": "3306",
   "username": "root",

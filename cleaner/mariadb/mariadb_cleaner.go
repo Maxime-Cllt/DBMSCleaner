@@ -8,10 +8,12 @@ import (
 	"log"
 )
 
+// MariaDbCleaner is a structure that implements the Cleaner interface
 type MariaDbCleaner struct {
 	database.Database
 }
 
+// Clean NewMariaDbCleaner creates a new MariaDbCleaner
 func (c *MariaDbCleaner) Clean() bool {
 
 	// Connexion à la base de données MySQL
@@ -39,6 +41,7 @@ func (c *MariaDbCleaner) Clean() bool {
 
 	// Rebuild index
 	println("Rebuilding index...")
+	rebuildIndex(db)
 
 	// Repair tables
 	println("Repairing tables...")
@@ -63,6 +66,7 @@ func (c *MariaDbCleaner) Clean() bool {
 	return true
 }
 
+// rebuildIndex rebuild index of the database
 func rebuildIndex(db *sql.DB) {
 	// Rebuild index
 	rows, err := db.Query("SELECT CONCAT('ALTER TABLE `', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS stmt FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql')")
@@ -85,6 +89,7 @@ func rebuildIndex(db *sql.DB) {
 	}
 }
 
+// repairTables repair tables of the database (MyISAM, ARCHIVE, CSV) and not in (sys, performance_schema, information_schema, mysql)
 func repairTables(db *sql.DB) {
 	// repair tables
 	rows, err := db.Query("SELECT CONCAT('REPAIR TABLE ',TABLE_SCHEMA, TABLE_NAME, ' EXTENDED') FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql');")
@@ -106,6 +111,7 @@ func repairTables(db *sql.DB) {
 	}
 }
 
+// cleanAllTables clean all tables of the database
 func cleanAllTables(db *sql.DB) {
 	// clean all tables
 	rows, err := db.Query("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS stmt FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')")
@@ -132,10 +138,12 @@ func cleanAllTables(db *sql.DB) {
 	}
 }
 
+// getTotalSizeSql get the total size of the database
 func getTotalSizeSql() string {
 	return "SELECT SUM(data_length + index_length) AS 'size' FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
 }
 
+// clearLogs clear logs of the database
 func clearLogs(db *sql.DB) {
 	list := []string{
 		"FLUSH LOGS",
@@ -157,6 +165,7 @@ func clearLogs(db *sql.DB) {
 	}
 }
 
+// setGlobalVariablesOFF set global variables to OFF to avoid performance issues during cleaning
 func setGlobalVariablesOFF(db *sql.DB) {
 	globalVariables := []string{
 		"SET GLOBAL general_log = 'OFF'",                  // Disable general log to avoid performance issues during cleaning
@@ -175,6 +184,7 @@ func setGlobalVariablesOFF(db *sql.DB) {
 	}
 }
 
+// setGlobalVariablesON set global variables to ON after cleaning to monitor database activities
 func setGlobalVariablesON(db *sql.DB) {
 	globalVariables := []string{
 		"SET GLOBAL general_log = 'ON'",                    // Enable general log to monitor database activities

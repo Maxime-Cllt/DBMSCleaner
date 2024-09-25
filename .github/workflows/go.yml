@@ -10,8 +10,11 @@ on:
 
 jobs:
   build:
-    # Utilisation de la machine virtuelle ubuntu-latest
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       # Vérifier le code depuis GitHub
@@ -33,6 +36,36 @@ jobs:
       - name: Build
         run: go build -v .
 
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-${{ matrix.os }}
+          path: GoSqlCleaner
+          retention-days: 1
+
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: build-ubuntu-latest
+          path: GoSqlCleaner_ubuntu
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: build-macos-latest
+          path: GoSqlCleaner_macos
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: build-windows-latest
+          path: GoSqlCleaner_windows
+
       - name: Creating release
         uses: softprops/action-gh-release@v2
         with:
@@ -40,6 +73,10 @@ jobs:
           name: ${{ github.event.inputs.gosqlcleaner }}
           draft: false
           prerelease: false
-          files: GoSqlCleaner
+          files: |
+            GoSqlCleaner_ubuntu
+            GoSqlCleaner_macos
+            GoSqlCleaner_windows
           token: ${{ secrets.GITHUB_TOKEN }}
+
 

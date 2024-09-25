@@ -9,10 +9,12 @@ import (
 	"log"
 )
 
+// Postgresql struct
 type Postgresql struct {
 	database.Database
 }
 
+// Clean cleans the database
 func (c *Postgresql) Clean() bool {
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", c.Database.Host, c.Database.Port, c.Database.Username, c.Database.Password, c.Database.Database)
@@ -50,9 +52,11 @@ func (c *Postgresql) Clean() bool {
 	println("End size of the database:", util.Green, endSize, " bytes", util.Reset)
 	println("Optimization of ", util.Green, startSize-endSize, util.Reset, " bytes")
 
+	util.LogMessage(startSize, endSize)
 	return true
 }
 
+// reindexDatabase reindex all databases except template0 and template1
 func reindexDatabase(db *sql.DB) {
 	rows, err := db.Query("SELECT datname FROM pg_database WHERE datname NOT IN ('template0', 'template1');")
 	if err != nil {
@@ -74,6 +78,7 @@ func reindexDatabase(db *sql.DB) {
 	}
 }
 
+// cleanAllTables clean all tables in the database
 func cleanAllTables(db *sql.DB) {
 	// clean all tables
 	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog')")
@@ -98,10 +103,12 @@ func cleanAllTables(db *sql.DB) {
 	}
 }
 
+// getTotalSizeSql get the total size of the database in bytes
 func getTotalSizeSql() string {
 	return "SELECT SUM(pg_database_size(datname)) AS total_size_bytes FROM pg_database;"
 }
 
+// clearLogs clear all logs in the database
 func clearLogs(db *sql.DB) {
 	list := []string{
 		"CHECKPOINT;",

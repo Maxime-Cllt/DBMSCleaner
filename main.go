@@ -53,6 +53,7 @@ func main() {
 	fmt.Println("Time taken to execute the cleaner:", util.Green, (time.Now().UnixNano()-startTime)/1000000, "ms", util.Reset)
 }
 
+// GetDbConfig reads the config.json file and returns the database configuration as DBConfig
 func GetDbConfig() database.DBConfig {
 	jsonFile, err := os.Open("config.json")
 	if err != nil {

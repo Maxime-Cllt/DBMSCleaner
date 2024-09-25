@@ -3,3 +3,6 @@ config.json
 go.sum
 .postgres_data
 .idea
+*.log
+*.exe
+*

@@ -9,10 +9,12 @@ import (
 	"log"
 )
 
+// MySqlCleaner is a struct that implements the Cleaner interface
 type MySqlCleaner struct {
 	database.Database
 }
 
+// Clean NewMySqlCleaner creates a new instance of MySqlCleaner
 func (c *MySqlCleaner) Clean() bool {
 
 	// Connexion à la base de données MySQL
@@ -65,6 +67,7 @@ func (c *MySqlCleaner) Clean() bool {
 	return true
 }
 
+// NewMySqlCleaner creates a new instance of MySqlCleaner with the given parameters
 func rebuildIndex(db *sql.DB) {
 	// Rebuild index
 	rows, err := db.Query("SELECT CONCAT('ALTER TABLE `', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS stmt FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql')")
@@ -87,6 +90,7 @@ func rebuildIndex(db *sql.DB) {
 	}
 }
 
+// MySqlCleaner creates a new instance of MySqlCleaner with the given parameters
 func repairTables(db *sql.DB) {
 	// repair tables
 	rows, err := db.Query("SELECT CONCAT('REPAIR TABLE ',TABLE_SCHEMA, TABLE_NAME, ' EXTENDED') FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql');")
@@ -108,6 +112,7 @@ func repairTables(db *sql.DB) {
 	}
 }
 
+// MySqlCleaner creates a new instance of MySqlCleaner with the given parameters
 func cleanAllTables(db *sql.DB) {
 	// clean all tables
 	rows, err := db.Query("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS stmt FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')")
@@ -134,10 +139,12 @@ func cleanAllTables(db *sql.DB) {
 	}
 }
 
+// getTotalSizeSql returns the SQL query to get the total size of the database in bytes
 func getTotalSizeSql() string {
 	return "SELECT SUM(data_length + index_length) AS 'size' FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
 }
 
+// clearLogs clears the logs of the database
 func clearLogs(db *sql.DB) {
 	list := []string{
 		"FLUSH LOGS",
@@ -157,6 +164,7 @@ func clearLogs(db *sql.DB) {
 	}
 }
 
+// setGlobalVariablesOFF sets the global variables to OFF
 func setGlobalVariablesOFF(db *sql.DB) {
 	globalVariables := []string{
 		"SET GLOBAL general_log = 'OFF'",                  // Disable general log to avoid performance issues during cleaning
@@ -175,6 +183,7 @@ func setGlobalVariablesOFF(db *sql.DB) {
 	}
 }
 
+// setGlobalVariablesON sets the global variables to ON
 func setGlobalVariablesON(db *sql.DB) {
 	globalVariables := []string{
 		"SET GLOBAL general_log = 'ON'",                    // Enable general log to monitor database activities
