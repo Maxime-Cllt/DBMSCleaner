@@ -31,7 +31,6 @@ func (c *Postgresql) Clean() bool {
 	}
 
 	totalSize := getTotalSizeSql()
-
 	startSize := util.GetDbSize(db, totalSize)
 
 	println("Start size of the database:", util.Green, startSize, " bytes", util.Reset)
@@ -43,6 +42,10 @@ func (c *Postgresql) Clean() bool {
 	// Clean all tables
 	println("Cleaning all tables...")
 	cleanAllTables(db)
+
+	// Clean temporary tables and bloat
+	println("Cleaning up temporary tables and bloat...")
+	clearTempTablesAndBloat(db)
 
 	// Clear logs
 	println("Clearing logs...")
@@ -60,7 +63,7 @@ func (c *Postgresql) Clean() bool {
 func reindexDatabase(db *sql.DB) {
 	rows, err := db.Query("SELECT datname FROM pg_database WHERE datname NOT IN ('template0', 'template1');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des tables:", err)
+		log.Fatal("Erreur lors de la récupération des bases de données:", err)
 	}
 	defer rows.Close()
 
@@ -80,25 +83,28 @@ func reindexDatabase(db *sql.DB) {
 
 // cleanAllTables clean all tables in the database
 func cleanAllTables(db *sql.DB) {
-	// clean all tables
 	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog')")
 	if err != nil {
 		log.Fatal("Erreur lors de la récupération des tables:", err)
 	}
 	defer rows.Close()
-	vacuum := "VACUUM "
-	analyse := "ANALYSE "
 
-	var stmt string
+	vacuum := "VACUUM FULL "
+	analyse := "ANALYZE "
+	var schema, table string
+
 	for rows.Next() {
-		err := rows.Scan(&stmt)
+		err := rows.Scan(&schema, &table)
+		stmt := fmt.Sprintf("%s.%s", schema, table)
+
 		_, err = db.Exec(vacuum + stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Erreur lors de l'exécution de la requête de nettoyage:", err)
 		}
+
 		_, err = db.Exec(analyse + stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Erreur lors de l'exécution de la requête d'analyse:", err)
 		}
 	}
 }
@@ -112,15 +118,28 @@ func getTotalSizeSql() string {
 func clearLogs(db *sql.DB) {
 	list := []string{
 		"CHECKPOINT;",
-		"SELECT pg_switch_wal();",
-		"VACUUM FULL;",
-		"SELECT pg_rotate_logfile();",
+		"SELECT pg_switch_wal();",     // Switch WAL segment files
+		"VACUUM FULL;",                // Reclaim space more aggressively
+		"SELECT pg_rotate_logfile();", // Rotate the transaction log files
 	}
 
 	for _, cmd := range list {
 		_, err := db.Exec(cmd)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Erreur lors de l'exécution de la requête de journalisation:", err)
 		}
+	}
+}
+
+// clearTempTablesAndBloat clean up temporary tables and remove bloat
+func clearTempTablesAndBloat(db *sql.DB) {
+	_, err := db.Exec("DROP TABLE IF EXISTS pg_temp CASCADE;") // Remove temporary tables
+	if err != nil {
+		log.Fatal("Erreur lors de la suppression des tables temporaires:", err)
+	}
+
+	_, err = db.Exec("VACUUM FULL;") // Reclaim space more aggressively
+	if err != nil {
+		log.Fatal("Erreur lors de l'élimination du bloat:", err)
 	}
 }

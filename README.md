@@ -79,7 +79,7 @@ You need to create a file named `config.json` in the same directory as the progr
 
 ```json
 {
-  "driver": "mysql", // {"mysql", "mariadb", "postgres"}
+  "driver": "mysql|mariadb|postgres",
   "host": "localhost",
   "port": "3306",
   "username": "root",
@@ -88,15 +88,28 @@ You need to create a file named `config.json` in the same directory as the progr
 }
 ```
 
-Then run the program with the following command:
+Replace the values with your database information. These information are only used to connect to the database and
+perform the cleaning.
+
+5. Then run the program with the following command:
 
 ### MacOS & Linux
+
+Change the permission of the file:
+
+```bash
+chmod +x GoSqlCleaner
+```
+
+Execute the program:
 
 ```bash
 ./GoSqlCleaner
 ```
 
 ### Windows
+
+Execute the program:
 
 ```bash
 GoSqlCleaner.exe
@@ -108,4 +121,13 @@ GoSqlCleaner.exe
 - Don't clean triggers, stored procedures, functions, and views
 - May not reduce much storage but don't cost much time to run and can be run frequently
 - Require some privileges to connect to the database and to perform the cleaning
+
+## See Also
+
+<ul>
+
+<li><a href="https://go.dev/">Go</a></li>
+<li><a href="https://golang.org/pkg/database/sql/">Database SQL</a></li>
+</ul>
+
 
