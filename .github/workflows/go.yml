@@ -36,16 +36,19 @@ jobs:
       - name: Build
         run: go build -v .
 
+      - name: Renammer
+        run : |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            echo "file_name=GoSqlCleaner.exe" >> $GITHUB_ENV
+          else
+            echo "file_name=GoSqlCleaner" >> $GITHUB_ENV
+          fi 
+
       - name: Archive
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
-          path: |
-            if [ "${{ matrix.os }}" = "windows-latest" ]; then
-              echo "GoSqlCleaner.exe"
-            else
-              echo "GoSqlCleaner"
-            fi
+          path: ${{ env.file_name }}
           retention-days: 1
 
 
