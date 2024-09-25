@@ -61,19 +61,25 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-ubuntu-latest
-          path: GoSqlCleaner_ubuntu
+          path: ubuntu
 
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: build-macos-latest
-          path: GoSqlCleaner_macos
+          path: macos
 
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: build-windows-latest
-          path: GoSqlCleaner_windows.exe
+          path: windows
+
+      - name: Renamer
+        run: |
+          mv ubuntu/GoSqlCleaner GoSqlCleaner_ubuntu
+          mv macos/GoSqlCleaner GoSqlCleaner_macos
+          mv windows/GoSqlCleaner.exe GoSqlCleaner_windows.exe
 
       - name: Creating release
         uses: softprops/action-gh-release@v2
