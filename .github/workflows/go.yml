@@ -85,7 +85,7 @@ jobs:
           files: |
             GoSqlCleaner_ubuntu
             GoSqlCleaner_macos
-            GoSqlCleaner_windows
+            GoSqlCleaner_windows.exe
           token: ${{ secrets.GITHUB_TOKEN }}
 
 
