@@ -38,11 +38,11 @@ jobs:
 
       - name: Renammer
         run : |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            echo "file_name=GoSqlCleaner.exe" >> $GITHUB_ENV
-          else
-            echo "file_name=GoSqlCleaner" >> $GITHUB_ENV
-          fi 
+          if [ "${{ matrix.os }}" == "windows-latest" ] ( 
+           echo "file_name=GoSqlCleaner.exe" >> $GITHUB_ENV 
+          ) else ( 
+           echo "file_name=GoSqlCleaner" >> $GITHUB_ENV 
+          )
 
       - name: Archive
         uses: actions/upload-artifact@v4
