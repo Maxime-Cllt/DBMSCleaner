@@ -37,7 +37,7 @@ jobs:
         run: go build -v .
 
       - name: Archive
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
           path: GoSqlCleaner
@@ -45,23 +45,24 @@ jobs:
 
 
   release:
+    needs: [ build ]
     runs-on: ubuntu-latest
     steps:
 
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: build-ubuntu-latest
           path: GoSqlCleaner_ubuntu
 
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: build-macos-latest
           path: GoSqlCleaner_macos
 
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: build-windows-latest
           path: GoSqlCleaner_windows
