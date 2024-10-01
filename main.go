@@ -44,7 +44,7 @@ func main() {
 		cleaner := cleanerFunc()
 		result := cleaner.Clean()
 		if result {
-			fmt.Println("Database cleaned successfully for:", cleanerKey)
+			fmt.Println(util.Green+"Database cleaned successfully for:", cleanerKey, util.Reset)
 		} else {
 			fmt.Println("Error while executing cleaner for:", util.Red, cleanerKey, util.Reset)
 		}

@@ -21,13 +21,13 @@ func (c *MariaDbCleaner) Clean() bool {
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal("Erreur lors de la connexion à la base de données:", err)
+		log.Fatal("Error connecting to the database:", err)
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Impossible de se connecter à la base de données:", err)
+		log.Fatal("Error connecting to the database:", err)
 	}
 
 	totalSize := getTotalSizeSql()
@@ -69,9 +69,9 @@ func (c *MariaDbCleaner) Clean() bool {
 // rebuildIndex rebuild index of the database
 func rebuildIndex(db *sql.DB) {
 	// Rebuild index
-	rows, err := db.Query("SELECT CONCAT('ALTER TABLE `', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS stmt FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql')")
+	rows, err := db.Query("SELECT CONCAT('ALTER TABLE `', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS stmt FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des tables:", err)
+		log.Fatal("Error while fetching tables:", err)
 	}
 	defer rows.Close()
 
@@ -80,11 +80,11 @@ func rebuildIndex(db *sql.DB) {
 	for rows.Next() {
 		err := rows.Scan(&stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de la lecture de la ligne:", err)
+			log.Fatal("Error while scanning the database name:", err)
 		}
 		_, err = db.Exec(stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -92,21 +92,24 @@ func rebuildIndex(db *sql.DB) {
 // repairTables repair tables of the database (MyISAM, ARCHIVE, CSV) and not in (sys, performance_schema, information_schema, mysql)
 func repairTables(db *sql.DB) {
 	// repair tables
-	rows, err := db.Query("SELECT CONCAT('REPAIR TABLE ',TABLE_SCHEMA, TABLE_NAME, ' EXTENDED') FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql');")
+	rows, err := db.Query("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS stmt FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('sys', 'performance_schema', 'information_schema', 'mysql');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des tables:", err)
+		log.Fatal("Error while fetching tables:", err)
 	}
 	defer rows.Close()
+
+	const repairStr = "REPAIR TABLE "
+	const extentedStr = " EXTENDED;"
 
 	var stmt string
 	for rows.Next() {
 		err := rows.Scan(&stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de la lecture de la ligne:", err)
+			log.Fatal("Error while scanning the database name:", err)
 		}
-		_, err = db.Exec(stmt)
+		_, err = db.Exec(repairStr + stmt + extentedStr)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -114,53 +117,49 @@ func repairTables(db *sql.DB) {
 // cleanAllTables clean all tables of the database
 func cleanAllTables(db *sql.DB) {
 	// clean all tables
-	rows, err := db.Query("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS stmt FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')")
+	rows, err := db.Query("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS stmt FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des tables:", err)
+		log.Fatal("Error while fetching tables:", err)
 	}
 	defer rows.Close()
 
+	const analyseStr = "ANALYZE TABLE "
 	var stmt string
 	for rows.Next() {
 		err := rows.Scan(&stmt)
 		if err != nil {
-			log.Fatal("Erreur lors de la lecture de la ligne:", err)
+			log.Fatal("Error while scanning the database name:", err)
 		}
-		_, err = db.Exec("ANALYZE TABLE " + stmt)
+		_, err = db.Exec(analyseStr + stmt + ";")
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
-		}
-
-		_, err = db.Exec("OPTIMIZE TABLE " + stmt)
-		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
 
 // getTotalSizeSql get the total size of the database
 func getTotalSizeSql() string {
-	return "SELECT SUM(data_length + index_length) AS 'size' FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
+	return "SELECT SUM(data_length + index_length) AS 'size' FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');"
 }
 
 // clearLogs clear logs of the database
 func clearLogs(db *sql.DB) {
 	list := []string{
-		"FLUSH LOGS",
-		"PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 30 DAY)",
-		"FLUSH PRIVILEGES",
-		"FLUSH TABLES",
-		"FLUSH TABLES WITH READ LOCK",
-		"UNLOCK TABLES",
-		"FLUSH STATUS",
-		"RESET MASTER",
-		"RESET SLAVE",
+		"FLUSH LOGS;",
+		"PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 30 DAY);",
+		"FLUSH PRIVILEGES;",
+		"FLUSH TABLES;",
+		"FLUSH TABLES WITH READ LOCK;",
+		"UNLOCK TABLES;",
+		"FLUSH STATUS;",
+		"RESET MASTER;",
+		"RESET SLAVE;",
 	}
 
 	for _, cmd := range list {
 		_, err := db.Exec(cmd)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -168,18 +167,18 @@ func clearLogs(db *sql.DB) {
 // setGlobalVariablesOFF set global variables to OFF to avoid performance issues during cleaning
 func setGlobalVariablesOFF(db *sql.DB) {
 	globalVariables := []string{
-		"SET GLOBAL general_log = 'OFF'",                  // Disable general log to avoid performance issues during cleaning
-		"SET GLOBAL slow_query_log = 'OFF'",               // Disable slow query log to avoid performance issues during cleaning
-		"SET GLOBAL log_output = 'TABLE'",                 // Set log output to table to avoid performance issues during cleaning
-		"SET GLOBAL log_queries_not_using_indexes = 'ON'", // Enable logging of queries not using indexes
-		"SET GLOBAL log_slow_admin_statements = 'ON'",     // Enable logging of slow admin statements
-		"SET GLOBAL log_slow_slave_statements = 'ON'",     // Enable logging of slow slave statements
+		"SET GLOBAL general_log = 'OFF';",                  // Disable general log to avoid performance issues during cleaning
+		"SET GLOBAL slow_query_log = 'OFF';",               // Disable slow query log to avoid performance issues during cleaning
+		"SET GLOBAL log_output = 'TABLE';",                 // Set log output to table to avoid performance issues during cleaning
+		"SET GLOBAL log_queries_not_using_indexes = 'ON';", // Enable logging of queries not using indexes
+		"SET GLOBAL log_slow_admin_statements = 'ON';",     // Enable logging of slow admin statements
+		"SET GLOBAL log_slow_slave_statements = 'ON';",     // Enable logging of slow slave statements
 	}
 
 	for _, cmd := range globalVariables {
 		_, err := db.Exec(cmd)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -187,17 +186,17 @@ func setGlobalVariablesOFF(db *sql.DB) {
 // setGlobalVariablesON set global variables to ON after cleaning to monitor database activities
 func setGlobalVariablesON(db *sql.DB) {
 	globalVariables := []string{
-		"SET GLOBAL general_log = 'ON'",                    // Enable general log to monitor database activities
-		"SET GLOBAL slow_query_log = 'ON'",                 // Enable slow query log to monitor slow queries
-		"SET GLOBAL log_output = 'FILE'",                   // Set log output to file to monitor database activities
-		"SET GLOBAL log_queries_not_using_indexes = 'OFF'", // Disable logging of queries not using indexes
-		"SET GLOBAL log_slow_admin_statements = 'OFF'",     // Disable logging of slow admin statements
-		"SET GLOBAL log_slow_slave_statements = 'OFF'",     // Disable logging of slow slave statements
+		"SET GLOBAL general_log = 'ON';",                    // Enable general log to monitor database activities
+		"SET GLOBAL slow_query_log = 'ON';",                 // Enable slow query log to monitor slow queries
+		"SET GLOBAL log_output = 'FILE';",                   // Set log output to file to monitor database activities
+		"SET GLOBAL log_queries_not_using_indexes = 'OFF';", // Disable logging of queries not using indexes
+		"SET GLOBAL log_slow_admin_statements = 'OFF';",     // Disable logging of slow admin statements
+		"SET GLOBAL log_slow_slave_statements = 'OFF';",     // Disable logging of slow slave statements
 	}
 	for _, cmd := range globalVariables {
 		_, err := db.Exec(cmd)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }

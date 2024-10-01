@@ -21,13 +21,13 @@ func (c *Postgresql) Clean() bool {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Impossible de se connecter à la base de données:", err)
+		log.Fatal("Error connecting to the database:", err)
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Impossible de se connecter à la base de données:", err)
+		log.Fatal("Error connecting to the database:", err)
 	}
 
 	totalSize := getTotalSizeSql()
@@ -63,48 +63,48 @@ func (c *Postgresql) Clean() bool {
 func reindexDatabase(db *sql.DB) {
 	rows, err := db.Query("SELECT datname FROM pg_database WHERE datname NOT IN ('template0', 'template1');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des bases de données:", err)
+		log.Fatal("Error while fetching databases:", err)
 	}
 	defer rows.Close()
 
 	var dbName string
-	reindex := "REINDEX DATABASE "
+	const reindex string = "REINDEX DATABASE "
 	for rows.Next() {
 		err := rows.Scan(&dbName)
 		if err != nil {
-			log.Fatal("Erreur lors de la lecture de la ligne:", err)
+			log.Fatal("Error while scanning the database name:", err)
 		}
-		_, err = db.Exec(reindex + dbName)
+		_, err = db.Exec(reindex + dbName + ";")
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
 
 // cleanAllTables clean all tables in the database
 func cleanAllTables(db *sql.DB) {
-	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog')")
+	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog');")
 	if err != nil {
-		log.Fatal("Erreur lors de la récupération des tables:", err)
+		log.Fatal("Error while fetching tables:", err)
 	}
 	defer rows.Close()
 
-	vacuum := "VACUUM FULL "
-	analyse := "ANALYZE "
-	var schema, table string
+	const vacuumStr = "VACUUM FULL "
+	const analyseStr = "ANALYZE "
 
+	var schema, table string
 	for rows.Next() {
 		err := rows.Scan(&schema, &table)
 		stmt := fmt.Sprintf("%s.%s", schema, table)
 
-		_, err = db.Exec(vacuum + stmt)
+		_, err = db.Exec(vacuumStr + stmt + ";")
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête de nettoyage:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 
-		_, err = db.Exec(analyse + stmt)
+		_, err = db.Exec(analyseStr + stmt + ";")
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête d'analyse:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func clearLogs(db *sql.DB) {
 	for _, cmd := range list {
 		_, err := db.Exec(cmd)
 		if err != nil {
-			log.Fatal("Erreur lors de l'exécution de la requête de journalisation:", err)
+			log.Fatal("Error while executing the command:", err)
 		}
 	}
 }
@@ -135,11 +135,11 @@ func clearLogs(db *sql.DB) {
 func clearTempTablesAndBloat(db *sql.DB) {
 	_, err := db.Exec("DROP TABLE IF EXISTS pg_temp CASCADE;") // Remove temporary tables
 	if err != nil {
-		log.Fatal("Erreur lors de la suppression des tables temporaires:", err)
+		log.Fatal("Error while dropping temporary tables:", err)
 	}
 
 	_, err = db.Exec("VACUUM FULL;") // Reclaim space more aggressively
 	if err != nil {
-		log.Fatal("Erreur lors de l'élimination du bloat:", err)
+		log.Fatal("Error while executing the command:", err)
 	}
 }
