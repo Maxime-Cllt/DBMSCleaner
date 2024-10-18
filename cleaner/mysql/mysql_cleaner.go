@@ -24,7 +24,12 @@ func (c *MySqlCleaner) Clean() bool {
 	if err != nil {
 		log.Fatal("Error connecting to the database:", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatal("Error while closing the database connection:", err)
+		}
+	}(db)
 
 	err = db.Ping()
 	if err != nil {
@@ -74,7 +79,12 @@ func rebuildIndex(db *sql.DB) {
 	if err != nil {
 		log.Fatal("Error while fetching tables:", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Fatal("Error while closing the rows:", err)
+		}
+	}(rows)
 
 	// iterate over the result
 	var stmt string
@@ -97,7 +107,12 @@ func repairTables(db *sql.DB) {
 	if err != nil {
 		log.Fatal("Error while fetching tables:", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Fatal("Error while closing the rows:", err)
+		}
+	}(rows)
 
 	const repairStr = "REPAIR TABLE "
 	const extentedStr = " EXTENDED;"
@@ -122,7 +137,12 @@ func cleanAllTables(db *sql.DB) {
 	if err != nil {
 		log.Fatal("Error while fetching tables:", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Fatal("Error while closing the rows:", err)
+		}
+	}(rows)
 
 	const analyseStr = "ANALYZE TABLE "
 	var stmt string

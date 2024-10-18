@@ -1,6 +1,6 @@
 <div align=center>
 <img src="/assets/dbcleaner.png" width="100px" height="100px"  alt="DBCleaner" align="center" />
-<h1>DBCleaner</h1>
+<h1>DBMS Cleaner</h1>
 </div>
 
 
@@ -12,13 +12,13 @@
 
 ## Description
 
-DBCleaner is a program made to be run on the backend of a server or an application to clean the database. It will reduce
+DBMS Cleaner is a program made to be run on the backend of a server or an application to clean the database. It will
+reduce
 the storage of the database and optimise all tables except system tables. It is a simple and efficient way to keep your
 database clean and optimised without having to do it manually. It is a great way to keep your database running in the
 best
 conditions possible. Using Go language, it is compatible with all platforms and can be run on any server or application.
 
-Exist in Java version too : <a href="https://github.com/Maxime-Cllt/DBCleaner">DBCleaner</a>
 
 ## Features
 
@@ -29,6 +29,7 @@ Exist in Java version too : <a href="https://github.com/Maxime-Cllt/DBCleaner">D
 <li>Compatible with all platforms</li>
 <li>Maintain your database in the best conditions possible</li>
 <li>Don't require any dump or backup</li>
+<li>Don't modify your files configuration</li>
 <li>Easily run on any server or application</li>
 <li>Easy to use</li>
 </ul>
@@ -88,7 +89,7 @@ You need to create a file named `config.json` in the same directory as the progr
 }
 ```
 
-Replace the values with your database information. These information are only used to connect to the database and
+Replace the values with your database information. This information are only used to connect to the database and
 perform the cleaning.
 
 5. Then run the program with the following command:

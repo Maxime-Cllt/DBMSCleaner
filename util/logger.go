@@ -12,7 +12,12 @@ func writeLog(logMessage string) error {
 	if err != nil {
 		return fmt.Errorf("error opening the file: %v", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Println("Error while closing the file:", err)
+		}
+	}(file)
 
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 
@@ -28,6 +33,9 @@ func writeLog(logMessage string) error {
 
 // LogMessage logs the message to the log file
 func LogMessage(startSize int, endSize int) {
-	logMsg := fmt.Sprintf("FROM: [%d] bytes TO: [%d] bytes | OPTIMIZATION: [%d] bytes", startSize, endSize, startSize-endSize)
-	writeLog(logMsg)
+	logMsg := fmt.Sprintf("FROM [%d] bytes TO [%d] bytes | OPTIMIZATION [%d] bytes", startSize, endSize, startSize-endSize)
+	err := writeLog(logMsg)
+	if err != nil {
+		return
+	}
 }

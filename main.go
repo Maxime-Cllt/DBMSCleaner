@@ -7,27 +7,23 @@ import (
 	"GoSqlCleaner/cleaner/postgresql"
 	"GoSqlCleaner/database"
 	"GoSqlCleaner/util"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"time"
 )
 
 func main() {
 
 	// Get the database configuration
-	config := GetDbConfig()
+	configFile := util.GetDbConfig()
 
 	// Create the database info
 	databaseInfo := database.Database{
-		Host:     config.Host,
-		Port:     config.Port,
-		Username: config.User,
-		Password: config.Password,
-		Database: config.Database,
-		Driver:   config.Driver,
+		Host:     configFile.Host,
+		Port:     configFile.Port,
+		Username: configFile.User,
+		Password: configFile.Password,
+		Database: configFile.Database,
+		Driver:   configFile.Driver,
 	}
 
 	// Create the cleaner map for the supported databases
@@ -39,38 +35,16 @@ func main() {
 
 	// Get the current time in nanoseconds
 	startTime := time.Now().UnixNano()
-	cleanerKey := config.Driver
+	cleanerKey := configFile.Driver
 	if cleanerFunc, exists := baseCleaners[cleanerKey]; exists {
-		cleaner := cleanerFunc()
-		result := cleaner.Clean()
+		cleanerInterface := cleanerFunc()
+		result := cleanerInterface.Clean()
 		if result {
 			fmt.Println(util.Green+"Database cleaned successfully for:", cleanerKey, util.Reset)
 		} else {
-			fmt.Println("Error while executing cleaner for:", util.Red, cleanerKey, util.Reset)
+			fmt.Println("Error while executing cleanerInterface for:", util.Red, cleanerKey, util.Reset)
 		}
 	}
 
 	fmt.Println("Time taken to execute the cleaner:", util.Green, (time.Now().UnixNano()-startTime)/1000000, "ms", util.Reset)
-}
-
-// GetDbConfig reads the config.json file and returns the database configuration as DBConfig
-func GetDbConfig() database.DBConfig {
-	jsonFile, err := os.Open("config.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer jsonFile.Close()
-
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	config := database.DBConfig{}
-
-	err = json.Unmarshal(byteValue, &config)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return config
 }
