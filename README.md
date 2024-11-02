@@ -34,11 +34,16 @@ conditions possible. Using Go language, it is compatible with all platforms and 
 <li>Easy to use</li>
 </ul>
 
-## Supported Databases
 
-- [x] MySQL
-- [x] MariaDB
-- [x] PostgreSQL
+## Supported databases
+
+<div align=center>
+
+![MySQL](https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white)
+![MySQL](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+
+</div>
 
 ## Platforms & Requirements
 
