@@ -64,7 +64,7 @@ To run the program :
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/Maxime-Cllt/GoSqlCleaner.git
+git clone https://github.com/Maxime-Cllt/DBMSCleaner.git
 ```
 
 2. Import the libraries:
@@ -76,7 +76,7 @@ go mod tidy
 3. Compile the program:
 
 ```bash
-go build -o GoSqlCleaner
+go build -o DBMSCleaner
 ```
 
 4. Run the program with the following your database information:
@@ -104,13 +104,13 @@ perform the cleaning.
 Change the permission of the file:
 
 ```bash
-chmod +x GoSqlCleaner
+chmod +x DBMSCleaner
 ```
 
 Execute the program:
 
 ```bash
-./GoSqlCleaner
+./DBMSCleaner
 ```
 
 ### Windows
@@ -118,7 +118,7 @@ Execute the program:
 Execute the program:
 
 ```bash
-GoSqlCleaner.exe
+DBMSCleaner.exe
 ```
 
 ## Notes

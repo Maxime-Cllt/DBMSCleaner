@@ -1,7 +1,7 @@
 package util
 
 import (
-	"GoSqlCleaner/database"
+	"DBMSCleaner/database"
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"GoSqlCleaner/cleaner"
-	"GoSqlCleaner/cleaner/mariadb"
-	"GoSqlCleaner/cleaner/mysql"
-	"GoSqlCleaner/cleaner/postgresql"
-	"GoSqlCleaner/database"
-	"GoSqlCleaner/util"
+	"DBMSCleaner/cleaner"
+	"DBMSCleaner/cleaner/mariadb"
+	"DBMSCleaner/cleaner/mysql"
+	"DBMSCleaner/cleaner/postgresql"
+	"DBMSCleaner/database"
+	"DBMSCleaner/util"
 	"fmt"
 	"time"
 )

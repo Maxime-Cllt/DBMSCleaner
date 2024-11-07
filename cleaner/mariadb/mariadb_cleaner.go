@@ -1,8 +1,8 @@
 package mariadb
 
 import (
-	"GoSqlCleaner/database"
-	"GoSqlCleaner/util"
+	"DBMSCleaner/database"
+	"DBMSCleaner/util"
 	"database/sql"
 	"fmt"
 	"log"

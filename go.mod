@@ -1,4 +1,4 @@
-module GoSqlCleaner
+module DBMSCleaner
 
 go 1.23.1
 

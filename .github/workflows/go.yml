@@ -1,10 +1,9 @@
-name: Go CI
+name: Go CI/CD Pipeline for Release
 
-# Le workflow s'exécute sur chaque push ou pull request vers les branches principales
 on:
   workflow_dispatch:
     inputs:
-      gosqlcleaner:
+      dbms_cleaner:
         description: 'Version du build'
         required: true
 
@@ -17,7 +16,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # Vérifier le code depuis GitHub
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -25,9 +23,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23.1' # Spécifiez ici la version de Go que vous utilisez
+          go-version: '1.23.1'
 
-      # Installer les dépendances Go (go.mod et go.sum doivent être présents)
+      # Installer les dépendances Go
       - name: Install dependencies
         run: |
           go mod tidy
@@ -40,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
-          path: GoSqlCleaner
+          path: DBMSCleaner
           retention-days: 1
         if: matrix.os != 'windows-latest'
 
@@ -48,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
-          path: GoSqlCleaner.exe
+          path: DBMSCleaner.exe
           retention-days: 1
         if: matrix.os == 'windows-latest'
 
@@ -77,21 +75,21 @@ jobs:
 
       - name: Renamer
         run: |
-          mv ubuntu/GoSqlCleaner GoSqlCleaner_ubuntu
-          mv macos/GoSqlCleaner GoSqlCleaner_macos
-          mv windows/GoSqlCleaner.exe GoSqlCleaner_windows.exe
+          mv ubuntu/DBMSCleaner DBMSCleaner_ubuntu
+          mv macos/DBMSCleaner DBMSCleaner_macos
+          mv windows/DBMSCleaner.exe DBMSCleaner_windows.exe
 
       - name: Creating release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.gosqlcleaner }}
-          name: ${{ github.event.inputs.gosqlcleaner }}
+          tag_name: ${{ github.event.inputs.dbms_cleaner }}
+          name: ${{ github.event.inputs.dbms_cleaner }}
           draft: false
           prerelease: false
           files: |
-            GoSqlCleaner_ubuntu
-            GoSqlCleaner_macos
-            GoSqlCleaner_windows.exe
+            DBMSCleaner_ubuntu
+            DBMSCleaner_macos
+            DBMSCleaner_windows.exe
           token: ${{ secrets.GITHUB_TOKEN }}
 
 

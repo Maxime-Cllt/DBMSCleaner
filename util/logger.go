@@ -8,7 +8,7 @@ import (
 
 // writeLog writes the log message to the log file
 func writeLog(logMessage string) error {
-	file, err := os.OpenFile("GoSqlCleaner.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	file, err := os.OpenFile("DBMSCleaner.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("error opening the file: %v", err)
 	}
