@@ -43,6 +43,7 @@ conditions possible. Using Go language, it is compatible with all platforms and 
 ![MySQL](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 
+
 </div>
 
 ## Platforms & Requirements
@@ -134,6 +135,7 @@ DBMSCleaner.exe
 
 <li><a href="https://go.dev/">Go</a></li>
 <li><a href="https://golang.org/pkg/database/sql/">Database SQL</a></li>
+<li><a href="https://github.com/Maxime-Cllt/SqliteCleaner">Sqlite Cleaner</a></li>
 </ul>
 
 
