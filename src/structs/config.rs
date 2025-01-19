@@ -4,12 +4,12 @@ use std::io::BufReader;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    driver: String,
-    host: String,
-    port: String,
-    username: String,
-    password: String,
-    database: String,
+    pub driver: String,
+    pub host: String,
+    pub port: String,
+    pub username: String,
+    pub password: String,
+    pub schema: String,
 }
 
 impl Config {
@@ -19,7 +19,7 @@ impl Config {
         port: &str,
         username: &str,
         password: &str,
-        database: &str,
+        schema: &str,
     ) -> Self {
         Config {
             driver: driver.to_string(),
@@ -27,11 +27,11 @@ impl Config {
             port: port.to_string(),
             username: username.to_string(),
             password: password.to_string(),
-            database: database.to_string(),
+            schema: schema.to_string(),
         }
     }
 
-    pub(crate) fn from_json(file_path: &str) -> Result<Self, std::io::Error> {
+    pub fn from_json(file_path: &str) -> Result<Self, std::io::Error> {
         let file: File = File::open(file_path)?;
         let reader: BufReader<File> = BufReader::new(file);
         let config: Config = serde_json::from_reader(reader)?;
