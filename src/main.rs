@@ -1,4 +1,4 @@
-use crate::cleaner::mysql::MySqlCleaner;
+use crate::cleaner::mariadb::MariaDBCleaner;
 use crate::structs::config::Config;
 use std::time::Instant;
 
@@ -18,7 +18,7 @@ async fn main() {
 
     let start: Instant = Instant::now();
 
-    let cleaner: MySqlCleaner = MySqlCleaner::from_config(config);
+    let cleaner: MariaDBCleaner = MariaDBCleaner::from_config(config);
     match cleaner.clean().await {
         Ok(_) => {
             let duration: std::time::Duration = start.elapsed();

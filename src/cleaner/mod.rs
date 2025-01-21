@@ -1,4 +1,4 @@
-pub mod mysql;
+pub mod mariadb;
 
 pub trait Cleaner {
     fn clean(&self);
