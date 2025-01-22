@@ -10,8 +10,10 @@ authors = ["Maxime Cllt"]
 [dependencies]
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.136"
-sqlx = { version = "0", features = ["mysql", "runtime-tokio-native-tls"] }
+sqlx = { version = "0", features = ["mysql", "postgres", "runtime-tokio-native-tls"] }
 tokio = { version = "*", features = ["full"] }
+num-format = "0.4.4"
+async-trait = "0.1.85"
 
 [dev-dependencies]
 

@@ -1,12 +1,15 @@
 use crate::cleaner::mariadb::MariaDBCleaner;
 use crate::structs::config::Config;
+use crate::utils::color::{GREEN, RED, RESET};
 use std::time::Instant;
-
-#[cfg(test)]
-mod tests;
+use crate::cleaner::database_cleaner::DatabaseCleaner;
 
 mod cleaner;
 mod structs;
+#[cfg(test)]
+mod tests;
+
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -14,16 +17,22 @@ async fn main() {
 
     let config: Config = Config::from_json(FILE_PATH).unwrap();
 
-    println!("Starting cleaning...");
-
     let start: Instant = Instant::now();
 
-    let cleaner: MariaDBCleaner = MariaDBCleaner::from_config(config);
+    let cleaner: Box<dyn DatabaseCleaner> = match config.driver.as_str() {
+        "mariadb" | "mysql" => {
+            Box::new(MariaDBCleaner::from_config(config)) as Box<dyn DatabaseCleaner>
+        }
+        _ => {
+            eprintln!("{RED}Unsupported database driver: {}{RESET}", config.driver);
+            std::process::exit(1);
+        }
+    };
+
     match cleaner.clean().await {
         Ok(_) => {
-            let duration: std::time::Duration = start.elapsed();
-            println!("Cleaning completed in {} seconds", duration.as_secs());
+            println!("Cleaning completed in {GREEN}{:?}{RESET}", start.elapsed());
         }
-        Err(e) => eprintln!("Error: {}", e),
+        Err(e) => eprintln!("Error: {e}"),
     }
 }
