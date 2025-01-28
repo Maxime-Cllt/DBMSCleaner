@@ -4,9 +4,9 @@ use crate::tests::config_test::get_test_config;
 
 #[tokio::test]
 async fn test_mariadb_struct() {
-    let config: Config = get_test_config();
+    let config: Config = get_test_config("mariadb", "3306");
     let maria_config: MariaDBCleaner = MariaDBCleaner::new(config);
-    assert_eq!(maria_config.config.driver, "mysql");
+    assert_eq!(maria_config.config.driver, "mariadb");
     assert_eq!(maria_config.config.host, "localhost");
     assert_eq!(maria_config.config.port, "3306");
     assert_eq!(maria_config.config.username, "root");

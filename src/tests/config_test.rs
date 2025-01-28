@@ -22,7 +22,7 @@ async fn test_struct_from_file() {
 
 #[tokio::test]
 async fn test_struct() {
-    let test_config: Config = get_test_config();
+    let test_config: Config = get_test_config("mysql", "3306");
     assert_eq!(test_config.driver, "mysql");
     assert_eq!(test_config.host, "localhost");
     assert_eq!(test_config.port, "3306");
@@ -49,11 +49,11 @@ fn delete_test_file_config(file_name: &str) {
     std::fs::remove_file(file_name).unwrap();
 }
 
-pub fn get_test_config() -> Config {
+pub fn get_test_config(driver: &str, port: &str) -> Config {
     Config {
-        driver: String::from("mysql"),
+        driver: String::from(driver),
         host: String::from("localhost"),
-        port: String::from("3306"),
+        port: String::from(port),
         username: String::from("root"),
         password: String::from("password"),
         schema: String::from("test"),

@@ -1,5 +1,6 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
+use crate::structs::logger::log_message;
 use crate::utils::color::{BLUE, GREEN, RESET, YELLOW};
 use crate::utils::libcleaner::{loop_and_execute_query_my_sql, merge_schema};
 use async_trait::async_trait;
@@ -30,11 +31,9 @@ impl DatabaseCleaner for MariaDBCleaner {
             start_size.to_formatted_string(&Locale::en)
         );
 
-        let all_tables: Vec<MySqlRow> = self.get_tables_from_schema(&pool).await?;
-
         self.reindex_all_tables(&pool).await?;
         self.repair_all_tables(&pool).await?;
-        self.analyse_all_tables(&pool, all_tables).await;
+        self.analyse_all_tables(&pool).await;
         Self::clear_logs(&pool).await?;
 
         self.print_report(start_size, &pool).await?;
@@ -65,7 +64,10 @@ impl MariaDBCleaner {
         for sql in sql_to_execute {
             match sqlx::query(sql).execute(pool).await {
                 Ok(_) => {}
-                Err(e) => eprintln!("{YELLOW}Error executing {sql}{RESET}: {e}"),
+                Err(e) => {
+                    eprintln!("{YELLOW}Error executing {sql}{RESET}: {e}");
+                    log_message(&format!("Error executing {sql}: {e}"));
+                }
             }
         }
         Ok(())
@@ -91,6 +93,9 @@ impl MariaDBCleaner {
             "Size of database reduced by: {GREEN}{}{RESET} bytes",
             diff.to_formatted_string(&Locale::en)
         );
+        log_message(&format!(
+            "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}]"
+        ));
         Ok(())
     }
 
@@ -119,8 +124,16 @@ impl MariaDBCleaner {
     }
 
     /// Execute the ANALYZE TABLE command on all tables
-    async fn analyse_all_tables(&self, pool: &Pool<MySql>, rows: Vec<MySqlRow>) {
-        loop_and_execute_query_my_sql(pool, &rows, "ANALYZE TABLE ").await;
+    async fn analyse_all_tables(&self, pool: &Pool<MySql>) {
+        let all_tables: Vec<MySqlRow> = match self.get_tables_from_schema(pool).await {
+            Ok(tables) => tables,
+            Err(e) => {
+                eprintln!("{YELLOW}Error getting tables from schema{RESET}: {e}");
+                log_message(&format!("Error getting tables from schema: {e}"));
+                return;
+            }
+        };
+        loop_and_execute_query_my_sql(pool, &all_tables, "ANALYZE TABLE ").await;
     }
 
     /// Get the size of the database in bytes

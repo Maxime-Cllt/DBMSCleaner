@@ -1,6 +1,8 @@
 use crate::utils::color::{RESET, YELLOW};
 use sqlx::mysql::MySqlRow;
-use sqlx::{MySql, Pool, Row};
+use sqlx::postgres::PgRow;
+use sqlx::{MySql, Pool, Postgres, Row};
+use crate::structs::logger::log_message;
 
 /// Merge the schema into a single string
 /// # Returns
@@ -38,6 +40,26 @@ pub async fn loop_and_execute_query_my_sql(
             Ok(_) => {}
             Err(e) => {
                 eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
+                log_message(&format!("Error for table {table_name}: {e}"));
+            }
+        }
+    }
+}
+
+pub async fn loop_and_execute_query_postgres(
+    pool: &Pool<Postgres>,
+    all_tables: &[PgRow],
+    command: &str,
+) {
+    const QUERY_INDEX: &str = "all_tables";
+    for row in all_tables {
+        let table_name: String = row.get(QUERY_INDEX);
+        let analyze_sql: String = format!("{command}{table_name}");
+        match sqlx::query(&analyze_sql).execute(pool).await {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
+                log_message(&format!("Error for table {table_name}: {e}"));
             }
         }
     }

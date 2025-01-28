@@ -21,13 +21,13 @@ all major platforms.
 
 ## ✨ Key Features
 
-- 🚀 **Efficient Storage Optimization:** Reduce database size by cleaning unused data.
+- 🚀 **Efficient Storage Optimization:** Reduce database size by rebuilding indexes.
 - ⚙️ **Table Optimization:** Ensures all tables (excluding system tables) are optimized.
 - 🖥️ **Cross-Platform Support:** Seamlessly run on Windows, MacOS, and Linux.
 - 🛠️ **Simple Integration:** No changes to FILE configurations required.
 - 🛡️ **Safe and Reliable:** Maintains database integrity without the need for backups.
 - 🔧 **Customizable:** Easily configure settings via `config.json`.
-- ⏱️ **Quick Execution:** Low time complexity (O(n) for n tables).
+- ⏱️ **Fast Execution:** Run it as a cron job or scheduled task for continuous optimization.
 
 ---
 
@@ -123,7 +123,7 @@ schemas (except system schemas).
 ## 🔗 See Also
 
 - [Rust Language](https://www.rust-lang.org/)
-- [Database SQL](https://golang.org/pkg/database/sql/)
+- [Database SQL](https://golang.org/pkg/database/SQL/)
 - [Sqlite Cleaner](https://github.com/Maxime-Cllt/SqliteCleaner)
 
 ---

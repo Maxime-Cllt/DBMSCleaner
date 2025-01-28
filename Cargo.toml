@@ -14,6 +14,9 @@ sqlx = { version = "0", features = ["mysql", "postgres", "runtime-tokio-native-t
 tokio = { version = "*", features = ["full"] }
 num-format = "0.4.4"
 async-trait = "0.1.85"
+chrono = "0.4.39"
+once_cell = "1.20.2"
+log = "0.4.25"
 
 [dev-dependencies]
 

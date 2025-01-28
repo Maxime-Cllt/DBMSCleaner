@@ -1,8 +1,9 @@
+use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::cleaner::mariadb::MariaDBCleaner;
+use crate::cleaner::postgres::PostgresCleaner;
 use crate::structs::config::Config;
 use crate::utils::color::{GREEN, RED, RESET};
 use std::time::Instant;
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 
 mod cleaner;
 mod structs;
@@ -20,9 +21,8 @@ async fn main() {
     let start: Instant = Instant::now();
 
     let cleaner: Box<dyn DatabaseCleaner> = match config.driver.as_str() {
-        "mariadb" | "mysql" => {
-            Box::new(MariaDBCleaner::from_config(config)) as Box<dyn DatabaseCleaner>
-        }
+        "mariadb" | "mysql" => Box::new(MariaDBCleaner::from_config(config)),
+        "postgres" => Box::new(PostgresCleaner::from_config(config)),
         _ => {
             eprintln!("{RED}Unsupported database driver: {}{RESET}", config.driver);
             std::process::exit(1);
