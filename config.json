@@ -4,5 +4,5 @@
   "port": "3306",
   "username": "root",
   "password": "",
-  "schema": "annuaire,sacre,dise"
+  "schema": "annuaire, caf, fregate"
 }

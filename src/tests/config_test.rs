@@ -1,4 +1,5 @@
 use crate::structs::config::Config;
+use crate::utils::color::{RED, RESET};
 use std::fs::File;
 use std::io::Write;
 
@@ -46,7 +47,12 @@ fn generate_test_file_config(file_name: &str) {
 }
 
 fn delete_test_file_config(file_name: &str) {
-    std::fs::remove_file(file_name).unwrap();
+    match std::fs::remove_file(file_name) {
+        Ok(_) => {}
+        Err(_) => {
+            println!("{RED}Error deleting file{file_name}{RESET}",);
+        }
+    }
 }
 
 pub fn get_test_config(driver: &str, port: &str) -> Config {

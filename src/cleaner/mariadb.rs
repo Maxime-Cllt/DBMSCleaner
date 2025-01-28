@@ -2,7 +2,7 @@ use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
 use crate::utils::color::{BLUE, GREEN, RESET, YELLOW};
-use crate::utils::libcleaner::{loop_and_execute_query_my_sql, merge_schema};
+use crate::utils::libcleaner::merge_schema;
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::mysql::MySqlRow;
@@ -106,7 +106,7 @@ impl MariaDBCleaner {
                 .fetch_all(pool)
                 .await?;
 
-        loop_and_execute_query_my_sql(pool, &all_tables, "ALTER TABLE ").await;
+        Self::loop_and_execute_query_my_sql(pool, &all_tables, "ALTER TABLE ").await;
 
         Ok(())
     }
@@ -118,22 +118,24 @@ impl MariaDBCleaner {
                 .fetch_all(pool)
                 .await?;
 
-        loop_and_execute_query_my_sql(pool, &all_tables, "REPAIR TABLE ").await;
+        Self::loop_and_execute_query_my_sql(pool, &all_tables, "REPAIR TABLE ").await;
 
         Ok(())
     }
 
     /// Execute the ANALYZE TABLE command on all tables
-    async fn analyse_all_tables(&self, pool: &Pool<MySql>) {
+    async fn analyse_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         let all_tables: Vec<MySqlRow> = match self.get_tables_from_schema(pool).await {
             Ok(tables) => tables,
             Err(e) => {
                 eprintln!("{YELLOW}Error getting tables from schema{RESET}: {e}");
                 log_message(&format!("Error getting tables from schema: {e}"));
-                return;
+                return Err(Box::new(e));
             }
         };
-        loop_and_execute_query_my_sql(pool, &all_tables, "ANALYZE TABLE ").await;
+        Self::loop_and_execute_query_my_sql(pool, &all_tables, "ANALYZE TABLE ").await;
+
+        Ok(())
     }
 
     /// Get the size of the database in bytes
@@ -212,5 +214,32 @@ impl MariaDBCleaner {
         query_all_tables.push_str(merge_schema(schema).as_str());
         query_all_tables.push_str(");");
         query_all_tables
+    }
+
+    /// Loop through all tables and execute the specified command
+    /// # Arguments
+    /// * `pool` - A reference to a sqlx::Pool<MySql> object
+    /// * `all_tables` - A reference to a Vec<MySqlRow> object
+    /// * `command` - A reference to a String object
+    /// # Returns
+    /// * A Result containing the size of the database in bytes
+    pub async fn loop_and_execute_query_my_sql(
+        pool: &Pool<MySql>,
+        all_tables: &[MySqlRow],
+        command: &str,
+    ) {
+        const QUERY_INDEX: &str = "all_tables";
+        for row in all_tables {
+            let table_name: String = row.get(QUERY_INDEX);
+            let analyze_sql: String = format!("{command}{table_name}");
+            match sqlx::query(&analyze_sql).execute(pool).await {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
+                    log_message(&format!("Error for table {table_name}: {e}"));
+                    continue;
+                }
+            }
+        }
     }
 }

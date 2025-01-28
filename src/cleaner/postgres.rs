@@ -1,12 +1,12 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
-use crate::utils::color::{BLUE, GREEN, RED, RESET};
-use crate::utils::libcleaner::{loop_and_execute_query_postgres, merge_schema};
+use crate::utils::color::{BLUE, GREEN, RED, RESET, YELLOW};
+use crate::utils::libcleaner::merge_schema;
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::postgres::PgRow;
-use sqlx::{Pool, Postgres};
+use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 
 pub struct PostgresCleaner {
@@ -72,7 +72,7 @@ impl PostgresCleaner {
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        loop_and_execute_query_postgres(pool, all_tables, "REINDEX DATABASE ").await;
+        Self::loop_and_execute_query_postgres(pool, all_tables, "REINDEX DATABASE ").await;
         Ok(())
     }
 
@@ -83,7 +83,7 @@ impl PostgresCleaner {
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        loop_and_execute_query_postgres(pool, all_tables, "VACUUM FULL ").await;
+        Self::loop_and_execute_query_postgres(pool, all_tables, "VACUUM FULL ").await;
         Ok(())
     }
 
@@ -94,7 +94,7 @@ impl PostgresCleaner {
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        loop_and_execute_query_postgres(pool, all_tables, "ANALYZE ").await;
+        Self::loop_and_execute_query_postgres(pool, all_tables, "ANALYZE ").await;
         Ok(())
     }
 
@@ -161,5 +161,25 @@ impl PostgresCleaner {
             "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}]"
         ));
         Ok(())
+    }
+
+    pub async fn loop_and_execute_query_postgres(
+        pool: &Pool<Postgres>,
+        all_tables: &[PgRow],
+        command: &str,
+    ) {
+        const QUERY_INDEX: &str = "all_tables";
+        for row in all_tables {
+            let table_name: String = row.get(QUERY_INDEX);
+            let analyze_sql: String = format!("{command}{table_name}");
+            match sqlx::query(&analyze_sql).execute(pool).await {
+                Ok(_) => {
+                }
+                Err(e) => {
+                    eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
+                    log_message(&format!("Error for table {table_name}: {e}"));
+                }
+            }
+        }
     }
 }

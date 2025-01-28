@@ -1,12 +1,9 @@
-use crate::utils::color::{RESET, YELLOW};
-use sqlx::mysql::MySqlRow;
-use sqlx::postgres::PgRow;
-use sqlx::{MySql, Pool, Postgres, Row};
-use crate::structs::logger::log_message;
 
 /// Merge the schema into a single string
+/// # Arguments
+/// * `schema` - A reference to a str object
 /// # Returns
-/// * A string containing the schema
+/// * A String object
 pub fn merge_schema(schema: &str) -> String {
     let vec_schema: Vec<&str> = schema.split(",").collect();
     let mut schema: String = String::new();
@@ -18,49 +15,4 @@ pub fn merge_schema(schema: &str) -> String {
         }
     }
     schema
-}
-
-/// Loop through all tables and execute the specified command
-/// # Arguments
-/// * `pool` - A reference to a sqlx::Pool<MySql> object
-/// * `all_tables` - A reference to a Vec<MySqlRow> object
-/// * `command` - A reference to a String object
-/// # Returns
-/// * A Result containing the size of the database in bytes
-pub async fn loop_and_execute_query_my_sql(
-    pool: &Pool<MySql>,
-    all_tables: &[MySqlRow],
-    command: &str,
-) {
-    const QUERY_INDEX: &str = "all_tables";
-    for row in all_tables {
-        let table_name: String = row.get(QUERY_INDEX);
-        let analyze_sql: String = format!("{command}{table_name}");
-        match sqlx::query(&analyze_sql).execute(pool).await {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
-                log_message(&format!("Error for table {table_name}: {e}"));
-            }
-        }
-    }
-}
-
-pub async fn loop_and_execute_query_postgres(
-    pool: &Pool<Postgres>,
-    all_tables: &[PgRow],
-    command: &str,
-) {
-    const QUERY_INDEX: &str = "all_tables";
-    for row in all_tables {
-        let table_name: String = row.get(QUERY_INDEX);
-        let analyze_sql: String = format!("{command}{table_name}");
-        match sqlx::query(&analyze_sql).execute(pool).await {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
-                log_message(&format!("Error for table {table_name}: {e}"));
-            }
-        }
-    }
 }
