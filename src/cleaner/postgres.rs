@@ -1,7 +1,7 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
-use crate::utils::color::{BLUE, GREEN, RED, RESET, YELLOW};
+use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
 use crate::utils::libcleaner::merge_schema;
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
@@ -58,8 +58,8 @@ impl PostgresCleaner {
                 .await?;
 
         self.drop_temp_tables(pool).await?;
-        self.reindex_all_tables(pool, &all_tables).await?;
-        self.vacuum_tables(pool, &all_tables).await?;
+        self.reindex_all_database(pool, &all_tables).await?;
+        self.vacuum_databases(pool, &all_tables).await?;
         self.analyze_tables(pool, &all_tables).await?;
 
         Ok(())
@@ -67,7 +67,7 @@ impl PostgresCleaner {
 
     /// Execute the REINDEX command on all tables in the database
     /// REINDEX rebuilds one or more indices in a database
-    async fn reindex_all_tables(
+    async fn reindex_all_database(
         &self,
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
@@ -78,7 +78,7 @@ impl PostgresCleaner {
 
     /// Execute the VACUUM command on all tables in the database
     /// VACUUM reclaims storage occupied by dead tuples. In normal PostgreSQL operation, tuples that are deleted or obsoleted by an update are not physically removed from their table; they remain present until a VACUUM is done.
-    async fn vacuum_tables(
+    async fn vacuum_databases(
         &self,
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],

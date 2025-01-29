@@ -1,5 +1,5 @@
 use crate::structs::config::Config;
-use crate::utils::color::{RED, RESET};
+use crate::utils::constant::{MYSQL, RED, RESET};
 use std::fs::File;
 use std::io::Write;
 
@@ -11,7 +11,7 @@ async fn test_struct_from_file() {
 
     let loaded_config: Config = Config::from_json(CONFIG_TEST_FILE).unwrap();
 
-    assert_eq!(loaded_config.driver, "mysql");
+    assert_eq!(loaded_config.driver, MYSQL);
     assert_eq!(loaded_config.host, "localhost");
     assert_eq!(loaded_config.port, "3306");
     assert_eq!(loaded_config.username, "root");
@@ -23,14 +23,16 @@ async fn test_struct_from_file() {
 
 #[tokio::test]
 async fn test_struct() {
-    let test_config: Config = get_test_config("mysql", "3306");
-    assert_eq!(test_config.driver, "mysql");
+    let test_config: Config = get_test_config(MYSQL, "3306");
+    assert_eq!(test_config.driver, MYSQL);
     assert_eq!(test_config.host, "localhost");
     assert_eq!(test_config.port, "3306");
     assert_eq!(test_config.username, "root");
     assert_eq!(test_config.password, "password");
     assert_eq!(test_config.schema, "test");
 }
+
+
 
 fn generate_test_file_config(file_name: &str) {
     let mut file: File = File::create(file_name).unwrap();

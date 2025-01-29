@@ -1,3 +1,5 @@
+use crate::structs::config::Config;
+use crate::utils::constant::{MARIADB, MYSQL, POSTGRES};
 
 /// Merge the schema into a single string
 /// # Arguments
@@ -5,14 +7,28 @@
 /// # Returns
 /// * A String object
 pub fn merge_schema(schema: &str) -> String {
-    let vec_schema: Vec<&str> = schema.split(",").collect();
-    let mut schema: String = String::new();
-    let max: usize = vec_schema.len();
-    for i in 0..max {
-        schema.push_str(&format!("'{}'", vec_schema[i].trim()));
-        if i < max - 1 {
-            schema.push(',');
-        }
-    }
     schema
+        .split(',')
+        .map(|s| format!("'{}'", s.trim()))
+        .collect::<Vec<String>>()
+        .join(",")
+}
+
+/// Get the url connection string based on the driver type
+/// # Arguments
+/// * `config` - A reference to a Config object
+/// # Returns
+/// * A Result object with the connection string or an error
+pub fn get_url_connection(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
+    match config.driver.as_str() {
+        MYSQL | MARIADB => Ok(format!(
+            "mysql://{}:{}@{}:{}/",
+            config.username, config.password, config.host, config.port
+        )),
+        POSTGRES => Ok(format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            config.username, config.password, config.host, config.port, config.schema
+        )),
+        _ => Err("Invalid driver".into()),
+    }
 }

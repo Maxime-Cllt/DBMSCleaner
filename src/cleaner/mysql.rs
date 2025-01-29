@@ -1,29 +1,25 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
-use crate::utils::color::{BLUE, GREEN, RESET, YELLOW};
-use crate::utils::libcleaner::merge_schema;
+use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
+use crate::utils::libcleaner::{get_url_connection, merge_schema};
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::mysql::MySqlRow;
-use sqlx::{MySql, Pool, Row};
+use sqlx::{Executor, MySql, Pool, Row};
 use std::error::Error;
 
-pub struct MariaDBCleaner {
+pub struct MySQLCleaner {
     pub config: Config,
 }
 
 #[async_trait]
-impl DatabaseCleaner for MariaDBCleaner {
+impl DatabaseCleaner for MySQLCleaner {
     async fn clean(&self) -> Result<(), Box<dyn Error>> {
-        println!("Cleaning MariaDBCleaner database...");
-        let database_url: String = format!(
-            "mysql://{}:{}@{}:{}/",
-            self.config.username, self.config.password, self.config.host, self.config.port,
-        );
+        let database_url: String = get_url_connection(&self.config)?;
 
         let pool: Pool<MySql> = Pool::connect(&database_url).await?;
-
+        println!("Cleaning {} database...", self.config.driver);
         let start_size: i64 = self.get_size_of_database(&pool).await?;
 
         println!(
@@ -31,9 +27,16 @@ impl DatabaseCleaner for MariaDBCleaner {
             start_size.to_formatted_string(&Locale::en)
         );
 
+        println!("Reindexing all tables...");
         self.reindex_all_tables(&pool).await?;
-        self.repair_all_tables(&pool).await?;
-        self.analyse_all_tables(&pool).await;
+
+        println!("Repairing all tables...");
+        self.check_and_repair_tables(&pool).await?;
+
+        println!("Analysing all tables...");
+        self.analyse_all_tables(&pool).await?;
+
+        println!("Clearing logs...");
         Self::clear_logs(&pool).await?;
 
         self.print_report(start_size, &pool).await?;
@@ -45,31 +48,38 @@ impl DatabaseCleaner for MariaDBCleaner {
     }
 }
 
-impl MariaDBCleaner {
+impl MySQLCleaner {
     pub fn new(config: Config) -> Self {
-        MariaDBCleaner { config }
+        MySQLCleaner { config }
     }
 
     /// Clear the logs of the database
     async fn clear_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         let sql_to_execute: Vec<&str> = vec![
             "FLUSH LOGS;",                                                // Flush the logs
-            "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 60 DAY);", // Purge the binary logs
-            "FLUSH PRIVILEGES;",                                          // Flush the privileges
-            "FLUSH TABLES;",                                              // Flush the tables
-            "FLUSH TABLES WITH READ LOCK;", // Flush the tables with read lock
-            "UNLOCK TABLES;",               // Unlock the tables
-            "FLUSH STATUS;",                // Reset the status variables
+            "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 60 DAY);", // Purge old binary logs
+            "FLUSH PRIVILEGES;",                                          // Reload privilege tables
+            "FLUSH TABLES;",                                              // Close all tables
+            "FLUSH TABLES WITH READ LOCK;", // Close all tables and lock them
+            "UNLOCK TABLES;",               // Unlock tables
+            "FLUSH STATUS;",                // Reset status variables
+            "FLUSH QUERY CACHE;",           // Clear the query cache
+            "RESET QUERY CACHE;",           // Reset query cache memory allocation
+            "FLUSH HOSTS;",                 // Reset host cache (useful for connection issues)
+            "FLUSH USER_RESOURCES;",        // Reset per-user resource limits
+            "RESET MASTER;",                // Reset the binary log index (use with caution!)
+            "RESET SLAVE ALL;",             // Reset all replication settings (use with caution!)
+            "SET GLOBAL innodb_buffer_pool_dump_now = ON;", // Dump InnoDB buffer pool for faster reload
+            "SET GLOBAL innodb_buffer_pool_load_now = ON;", // Reload InnoDB buffer pool
         ];
+
         for sql in sql_to_execute {
-            match sqlx::query(sql).execute(pool).await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("{YELLOW}Error executing {sql}{RESET}: {e}");
-                    log_message(&format!("Error executing {sql}: {e}"));
-                }
+            if let Err(e) = pool.execute(sql).await {
+                eprintln!("{RED}Error executing {sql}: {e}{RESET}");
+                log_message(&format!("Error executing {sql}: {e}"));
             }
         }
+
         Ok(())
     }
 
@@ -111,28 +121,45 @@ impl MariaDBCleaner {
         Ok(())
     }
 
-    /// Execute the REPAIR TABLE command on all tables
-    async fn repair_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+    /// Execute the REPAIR TABLE command only if necessary
+    async fn check_and_repair_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        const CHECK_TABLE_SQL: &str = "CHECK TABLE ";
+        const EXTENDED_SQL: &str = " EXTENDED;";
+        const REPAIR_TABLE_SQL: &str = "REPAIR TABLE ";
+
+        // Fetch the list of all tables in the schema
         let all_tables: Vec<MySqlRow> =
             sqlx::query(&Self::get_all_repair_tables_sql(&self.config.schema))
                 .fetch_all(pool)
                 .await?;
 
-        Self::loop_and_execute_query_my_sql(pool, &all_tables, "REPAIR TABLE ").await;
+        for item in all_tables.iter() {
+            let table_name: String = item.get("all_tables");
+            let check_sql = format!("{CHECK_TABLE_SQL}{table_name}{EXTENDED_SQL}");
+
+            //     execute the query and fetch result from the pool
+            let result = pool.fetch_one(&*check_sql).await?;
+            let msg_text: String = result.get("Msg_text");
+
+            if msg_text != "OK" {
+                eprintln!("{YELLOW}Table {table_name} needs repair{RESET}");
+
+                let repair_sql = format!("{REPAIR_TABLE_SQL}{table_name}{EXTENDED_SQL}");
+
+                if let Err(e) = pool.execute(repair_sql.as_str()).await {
+                    eprintln!("{RED}Error repairing table {table_name}: {e}{RESET}");
+                    log_message(&format!("Error repairing table {table_name}: {e}"));
+                }
+            }
+        }
 
         Ok(())
     }
 
     /// Execute the ANALYZE TABLE command on all tables
     async fn analyse_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
-        let all_tables: Vec<MySqlRow> = match self.get_tables_from_schema(pool).await {
-            Ok(tables) => tables,
-            Err(e) => {
-                eprintln!("{YELLOW}Error getting tables from schema{RESET}: {e}");
-                log_message(&format!("Error getting tables from schema: {e}"));
-                return Err(Box::new(e));
-            }
-        };
+        let all_tables: Vec<MySqlRow> = self.get_tables_from_schema(pool).await?;
+
         Self::loop_and_execute_query_my_sql(pool, &all_tables, "ANALYZE TABLE ").await;
 
         Ok(())
