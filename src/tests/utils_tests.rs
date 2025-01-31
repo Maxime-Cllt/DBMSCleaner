@@ -44,12 +44,13 @@ async fn test_get_connection_url() {
     let postgres_config_test: Config = get_test_config(POSTGRES, "5432");
     let error: Config = get_test_config("error", "5432");
 
-    let url: String = get_url_connection(&mysql_config_test).unwrap();
-    assert_eq!(url, "mysql://root:password@localhost:3306/test");
+    let url: String = get_url_connection(&mysql_config_test, &String::from("test")).unwrap();
+    assert_eq!(url, "mysql://root:password@localhost:3306/");
 
-    let url: String = get_url_connection(&postgres_config_test).unwrap();
+    let url: String = get_url_connection(&postgres_config_test, &String::from("test")).unwrap();
     assert_eq!(url, "postgresql://root:password@localhost:5432/test");
 
-    let url: Result<String, Box<dyn std::error::Error>> = get_url_connection(&error);
+    let url: Result<String, Box<dyn std::error::Error>> =
+        get_url_connection(&error, &String::from("test"));
     assert!(url.is_err());
 }

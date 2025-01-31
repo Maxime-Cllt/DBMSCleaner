@@ -16,7 +16,7 @@ pub struct MySQLCleaner {
 #[async_trait]
 impl DatabaseCleaner for MySQLCleaner {
     async fn clean(&self) -> Result<(), Box<dyn Error>> {
-        let database_url: String = get_url_connection(&self.config)?;
+        let database_url: String = get_url_connection(&self.config, &self.config.schema)?;
 
         let pool: Pool<MySql> = Pool::connect(&database_url).await?;
         println!("Cleaning {} database...", self.config.driver);

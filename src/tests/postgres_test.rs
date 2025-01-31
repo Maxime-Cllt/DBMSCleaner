@@ -19,24 +19,24 @@ async fn test_get_all_postgres_tables_sql() {
     let schema: String = String::from("test");
     let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
     let true_sql: String =
-        String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN ('test');");
+        String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test');");
     assert_eq!(tested_sql, true_sql);
 
     let schema: String = String::from("test,test1");
     let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
     let true_sql: String =
-        String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN ('test','test1');");
+        String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test','test1');");
     assert_eq!(tested_sql, true_sql);
 
     let schema: String = String::from("test,test1,test2");
     let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
     let true_sql: String =
-        String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN ('test','test1','test2');");
+        String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test','test1','test2');");
     assert_eq!(tested_sql, true_sql);
 
     let schema: String = String::from("*");
     let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
     let true_sql: String =
-        String::from("SELECT datname AS all_tables FROM pg_database WHERE datname NOT IN ('template0', 'template1');");
+        String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';");
     assert_eq!(tested_sql, true_sql);
 }

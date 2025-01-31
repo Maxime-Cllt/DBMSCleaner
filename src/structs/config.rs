@@ -15,11 +15,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_json(file_path: &str) -> Result<Self, std::io::Error> {
+    pub fn from_json(file_path: &str) -> Result<Self, Error> {
         let path: &Path = Path::new(file_path);
         if !path.exists() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
+            return Err(Error::new(
+                ErrorKind::NotFound,
                 format!("{RED}File not found: {file_path}{RESET}"),
             ));
         }
@@ -37,7 +37,7 @@ impl Config {
     /// * `config` - The configuration to check
     /// # Panics
     /// Panics if the configuration is invalid
-    fn check_config(config: &Config) -> Result<(), Error> {
+    pub(crate) fn check_config(config: &Config) -> Result<(), Error> {
         let validations = [
             (config.port.parse::<i32>().is_err(), "Port must be a number"),
             (
@@ -57,30 +57,6 @@ impl Config {
                 ));
             }
         }
-
         Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_config() {
-        assert!(Config::check_config(&Config {
-            driver: String::from(MYSQL),
-            host: String::from("localhost"),
-            port: String::from("3306"),
-            username: String::from("root"),
-            password: String::from("password"),
-            schema: String::from("test"),
-        })
-        .is_ok());
-
-        assert!(Config::check_config(&Config {
-            driver: String::from("invalid"),
-            host: String::from("localhost"),
-            port: String::from("3306"),
-            username: String::from("root"),
-            password: String::from("password"),
-            schema: String::from("test"),
-        })
-        .is_err());
     }
 }

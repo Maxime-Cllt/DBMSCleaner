@@ -1,5 +1,5 @@
 use crate::structs::config::Config;
-use crate::utils::constant::{MYSQL, RED, RESET};
+use crate::utils::constant::{MARIADB, MYSQL, POSTGRES, RED, RESET};
 use std::fs::File;
 use std::io::Write;
 
@@ -32,7 +32,48 @@ async fn test_struct() {
     assert_eq!(test_config.schema, "test");
 }
 
+#[tokio::test]
+async fn test_check_config() {
+    assert!(Config::check_config(&Config {
+        driver: String::from(MYSQL),
+        host: String::from("localhost"),
+        port: String::from("3306"),
+        username: String::from("root"),
+        password: String::from("password"),
+        schema: String::from("test"),
+    })
+    .is_ok());
 
+    assert!(Config::check_config(&Config {
+        driver: String::from(POSTGRES),
+        host: String::from("localhost"),
+        port: String::from("5432"),
+        username: String::from("root"),
+        password: String::from("password"),
+        schema: String::from("test, test2"),
+    })
+    .is_ok());
+
+    assert!(Config::check_config(&Config {
+        driver: String::from(MARIADB),
+        host: String::from("localhost"),
+        port: String::from("3306"),
+        username: String::from("root"),
+        password: String::from("password"),
+        schema: String::from("test, test2"),
+    })
+    .is_ok());
+
+    assert!(Config::check_config(&Config {
+        driver: String::from("invalid"),
+        host: String::from("localhost"),
+        port: String::from("3306"),
+        username: String::from("root"),
+        password: String::from("password"),
+        schema: String::from("test"),
+    })
+    .is_err());
+}
 
 fn generate_test_file_config(file_name: &str) {
     let mut file: File = File::create(file_name).unwrap();

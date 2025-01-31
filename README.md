@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>DBMS Cleaner</h1>
+    <h1>DBMSCleaner</h1>
 </div>
 
 <div align="center">
@@ -44,9 +44,9 @@ all major platforms.
 ## 💻 Platforms & Requirements
 
 <div align="center">
-    <img src="https://img.shields.io/badge/OS-MacOS-informational?style=flat&logo=apple&logoColor=white&color=53a863" alt="MacOS" />
-    <img src="https://img.shields.io/badge/OS-Linux-informational?style=flat&logo=linux&logoColor=white&color=53a863" alt="Linux" />
-    <img src="https://img.shields.io/badge/OS-Windows-informational?style=flat&logo=windows&logoColor=white&color=53a863" alt="Windows" />
+    <img src="https://img.shields.io/badge/OS-MacOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="MacOS" />
+    <img src="https://img.shields.io/badge/OS-Linux-228B22?style=for-the-badge&logo=linux&logoColor=white" alt="Linux" />
+    <img src="https://img.shields.io/badge/OS-Windows-0078d4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
 </div>
 
 ### 📋 Prerequisites
@@ -76,7 +76,7 @@ cargo build --release
 
 ### 3. Configure the Connection
 
-Create a `config.json` FILE in the same directory as the compiled program with the following content:
+Create a file named `cleaner.json` in the same directory as the compiled program with the following content:
 
 ```json
 {
@@ -122,9 +122,8 @@ schemas (except system schemas).
 
 ## 🔗 See Also
 
+- [SQLiteCleaner](https://github.com/Maxime-Cllt/SqliteCleaner)
 - [Rust Language](https://www.rust-lang.org/)
-- [Database SQL](https://golang.org/pkg/database/SQL/)
-- [Sqlite Cleaner](https://github.com/Maxime-Cllt/SqliteCleaner)
 
 ---
 

@@ -2,7 +2,7 @@ use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
 use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
-use crate::utils::libcleaner::merge_schema;
+use crate::utils::libcleaner::{get_url_connection, merge_schema};
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::postgres::PgRow;
@@ -17,26 +17,28 @@ pub struct PostgresCleaner {
 impl DatabaseCleaner for PostgresCleaner {
     async fn clean(&self) -> Result<(), Box<dyn Error>> {
         println!("Cleaning PostgresCleaner database...");
-        let database_url: String = format!(
-            "postgresql://{}:{}@{}:{}/{}",
-            self.config.username,
-            self.config.password,
-            self.config.host,
-            self.config.port,
-            self.config.schema
-        );
 
-        let pool: Pool<Postgres> = Pool::connect(&database_url).await?;
+        let schema_name: Vec<String> = merge_schema(&self.config.schema)
+            .split(',')
+            .map(|s| s.replace("'", "").trim().to_string())
+            .collect();
 
-        let start_size: i64 = self.get_size_of_database(&pool).await?;
+        let database_url: String = get_url_connection(&self.config, &schema_name[0])?;
+        let pool_size: Pool<Postgres> = Pool::connect(&database_url).await?;
+        let start_size: i64 = self.get_size_of_database(&pool_size).await?;
         println!(
             "Size of database at start: {BLUE}{}{RESET} bytes",
             start_size.to_formatted_string(&Locale::en)
         );
 
-        self.run(&pool).await?;
+        for schema in &schema_name {
+            println!("Cleaning schema: {schema}");
+            let database_url: String = get_url_connection(&self.config, schema)?;
+            let pool: Pool<Postgres> = Pool::connect(&database_url).await?;
+            self.run(&pool, schema).await?;
+        }
 
-        self.print_report(start_size, &pool).await?;
+        self.print_report(start_size, &pool_size).await?;
         Ok(())
     }
 
@@ -51,15 +53,18 @@ impl PostgresCleaner {
     }
 
     /// Execute the cleaning process into a single function to avoid query repetition
-    async fn run(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
-        let all_tables: Vec<PgRow> =
-            sqlx::query(&Self::get_all_postgres_tables_sql(&self.config.schema))
-                .fetch_all(pool)
-                .await?;
+    async fn run(&self, pool: &Pool<Postgres>, schema_name: &str) -> Result<(), Box<dyn Error>> {
+        let all_tables: Vec<PgRow> = sqlx::query(&Self::get_all_postgres_tables_sql(schema_name))
+            .fetch_all(pool)
+            .await?;
 
+        println!("Drop temporary tables...");
         self.drop_temp_tables(pool).await?;
+        println!("Reindexing all tables...");
         self.reindex_all_database(pool, &all_tables).await?;
+        println!("Vacuuming all tables...");
         self.vacuum_databases(pool, &all_tables).await?;
+        println!("Analyzing all tables...");
         self.analyze_tables(pool, &all_tables).await?;
 
         Ok(())
@@ -81,9 +86,9 @@ impl PostgresCleaner {
     async fn vacuum_databases(
         &self,
         pool: &Pool<Postgres>,
-        all_tables: &[PgRow],
+        all_database: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        Self::loop_and_execute_query_postgres(pool, all_tables, "VACUUM FULL ").await;
+        Self::loop_and_execute_query_postgres(pool, all_database, "VACUUM FULL ").await;
         Ok(())
     }
 
@@ -116,19 +121,33 @@ impl PostgresCleaner {
     pub fn get_all_postgres_tables_sql(schema: &str) -> String {
         if schema == "*" {
             return String::from(
-                "SELECT datname AS all_tables FROM pg_database WHERE datname NOT IN ('template0', 'template1');",
+                "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';",
             );
         }
         let mut query_all_tables: String =
-            String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN (");
+            String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN (");
         query_all_tables.push_str(merge_schema(schema).as_str());
         query_all_tables.push_str(");");
         query_all_tables
     }
 
+    // pub fn get_all_postgres_datname_sql(schema: &str) -> String {
+    //     if schema == "*" {
+    //         return String::from(
+    //             "SELECT datname AS all_tables FROM pg_database WHERE datname NOT IN ('template0', 'template1');",
+    //         );
+    //     }
+    //     let mut query_all_tables: String =
+    //         String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN (");
+    //     query_all_tables.push_str(merge_schema(schema).as_str());
+    //     query_all_tables.push_str(");");
+    //     println!("{query_all_tables}");
+    //     query_all_tables
+    // }
+
     async fn get_size_of_database(&self, pool: &Pool<Postgres>) -> Result<i64, Box<dyn Error>> {
         const QUERY: &str =
-            "SELECT SUM(pg_database_size(datname)) AS total_size_bytes FROM pg_database;";
+            "SELECT SUM(pg_database_size(datname))::BIGINT AS total_size_bytes FROM pg_database;";
         let row: (i64,) = sqlx::query_as(QUERY)
             .bind(&self.config.schema)
             .fetch_one(pool)
@@ -173,8 +192,7 @@ impl PostgresCleaner {
             let table_name: String = row.get(QUERY_INDEX);
             let analyze_sql: String = format!("{command}{table_name}");
             match sqlx::query(&analyze_sql).execute(pool).await {
-                Ok(_) => {
-                }
+                Ok(_) => {}
                 Err(e) => {
                     eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
                     log_message(&format!("Error for table {table_name}: {e}"));

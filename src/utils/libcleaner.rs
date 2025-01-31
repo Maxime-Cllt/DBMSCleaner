@@ -19,7 +19,10 @@ pub fn merge_schema(schema: &str) -> String {
 /// * `config` - A reference to a Config object
 /// # Returns
 /// * A Result object with the connection string or an error
-pub fn get_url_connection(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_url_connection(
+    config: &Config,
+    schema: &String,
+) -> Result<String, Box<dyn std::error::Error>> {
     match config.driver.as_str() {
         MYSQL | MARIADB => Ok(format!(
             "mysql://{}:{}@{}:{}/",
@@ -27,7 +30,7 @@ pub fn get_url_connection(config: &Config) -> Result<String, Box<dyn std::error:
         )),
         POSTGRES => Ok(format!(
             "postgresql://{}:{}@{}:{}/{}",
-            config.username, config.password, config.host, config.port, config.schema
+            config.username, config.password, config.host, config.port, schema
         )),
         _ => Err("Invalid driver".into()),
     }
