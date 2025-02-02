@@ -24,7 +24,9 @@ impl Logger {
     /// * `message` - The message to log
     fn log(&self, message: &str) {
         let mut log_writer: BufWriter<&File> = BufWriter::new(&self.log_file);
-        writeln!(log_writer, "[{}] {message}", chrono::Local::now()).unwrap();
+        writeln!(log_writer, "[{}] {message}", chrono::Local::now()).unwrap_or_else(|_| {
+            panic!("Failed to write to log file");
+        });
     }
 }
 

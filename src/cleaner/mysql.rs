@@ -20,7 +20,7 @@ impl DatabaseCleaner for MySQLCleaner {
 
         let pool: Pool<MySql> = Pool::connect(&database_url).await?;
         println!("Cleaning {} database...", self.config.driver);
-        let start_size: i64 = self.get_size_of_database(&pool).await?;
+        let start_size: i64 = Self::get_size_of_database(&pool).await?;
 
         println!(
             "Size of database at start: {BLUE}{}{RESET} bytes",
@@ -89,7 +89,7 @@ impl MySQLCleaner {
         start_size: i64,
         pool: &Pool<MySql>,
     ) -> Result<(), Box<dyn Error>> {
-        let end_size: i64 = self.get_size_of_database(pool).await?;
+        let end_size: i64 = Self::get_size_of_database(pool).await?;
         let diff: i64 = if start_size > end_size {
             start_size - end_size
         } else {
@@ -135,16 +135,15 @@ impl MySQLCleaner {
 
         for item in all_tables.iter() {
             let table_name: String = item.get("all_tables");
-            let check_sql = format!("{CHECK_TABLE_SQL}{table_name}{EXTENDED_SQL}");
+            let check_sql: String = format!("{CHECK_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
-            //     execute the query and fetch result from the pool
-            let result = pool.fetch_one(&*check_sql).await?;
+            let result: MySqlRow = pool.fetch_one(&*check_sql).await?;
             let msg_text: String = result.get("Msg_text");
 
             if msg_text != "OK" {
                 eprintln!("{YELLOW}Table {table_name} needs repair{RESET}");
 
-                let repair_sql = format!("{REPAIR_TABLE_SQL}{table_name}{EXTENDED_SQL}");
+                let repair_sql: String = format!("{REPAIR_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
                 if let Err(e) = pool.execute(repair_sql.as_str()).await {
                     eprintln!("{RED}Error repairing table {table_name}: {e}{RESET}");
@@ -170,14 +169,13 @@ impl MySQLCleaner {
     /// * `pool` - A reference to a sqlx::Pool<MySql> object
     /// # Returns
     /// * A Result containing the size of the database in bytes
-    async fn get_size_of_database(&self, pool: &Pool<MySql>) -> Result<i64, Box<dyn Error>> {
+    async fn get_size_of_database(pool: &Pool<MySql>) -> Result<i64, Box<dyn Error>> {
         const SIZE_SQL: &str = "SELECT CAST(SUM(data_length + index_length) AS SIGNED) AS 'size'
                                 FROM information_schema.TABLES
                                 WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');";
-
         let row: MySqlRow = sqlx::query(SIZE_SQL).fetch_one(pool).await?;
-        let size: i64 = row.get("size");
-        Ok(size)
+        let size: Option<i64> = row.try_get("size")?;
+        Ok(size.unwrap_or(0))
     }
 
     /// Get all tables in the specified schema
@@ -205,8 +203,7 @@ impl MySQLCleaner {
             return String::from("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');");
         }
         let mut query_all_tables: String = String::from(
-            "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') \
-            AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (",
+            "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (",
         );
         query_all_tables.push_str(merge_schema(schema).as_str());
         query_all_tables.push_str(");");

@@ -27,7 +27,7 @@ impl Config {
         let reader: BufReader<File> = BufReader::new(file);
         let config: Config = serde_json::from_reader(reader)?;
 
-        Config::check_config(&config).expect("Invalid configuration");
+        Config::check_config(&config).expect("Invalid configuration file");
 
         Ok(config)
     }
