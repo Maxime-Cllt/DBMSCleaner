@@ -104,7 +104,7 @@ impl MySQLCleaner {
             diff.to_formatted_string(&Locale::en)
         );
         log_message(&format!(
-            "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}]"
+            "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}] bytes"
         ));
         Ok(())
     }

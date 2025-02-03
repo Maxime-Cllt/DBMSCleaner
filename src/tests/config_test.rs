@@ -9,7 +9,7 @@ async fn test_struct_from_file() {
 
     generate_test_file_config(CONFIG_TEST_FILE);
 
-    let loaded_config: Config = Config::from_json(CONFIG_TEST_FILE).unwrap();
+    let loaded_config: Config = Config::load_config(CONFIG_TEST_FILE).unwrap();
 
     assert_eq!(loaded_config.driver, MYSQL);
     assert_eq!(loaded_config.host, "localhost");
