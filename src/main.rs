@@ -2,6 +2,7 @@ use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::cleaner::mysql::MySQLCleaner;
 use crate::cleaner::postgres::PostgresCleaner;
 use crate::structs::config::Config;
+use crate::structs::logger::log_message;
 use crate::utils::constant::{GREEN, MARIADB, MYSQL, POSTGRES, RED, RESET};
 use std::time::Instant;
 
@@ -14,9 +15,14 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    const FILE_PATH: &str = "cleaner.json";
-
-    let config: Config = Config::from_json(FILE_PATH).unwrap();
+    let config: Config = match Config::load_config("cleaner.json") {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("{RED}Error: {e}{RESET}");
+            log_message(&format!("{e}"));
+            std::process::exit(1);
+        }
+    };
 
     let start: Instant = Instant::now();
 
@@ -25,6 +31,7 @@ async fn main() {
         POSTGRES => Box::new(PostgresCleaner::from_config(config)),
         _ => {
             eprintln!("{RED}Unsupported database driver: {}{RESET}", config.driver);
+            log_message(&format!("Unsupported database driver: {}", config.driver));
             std::process::exit(1);
         }
     };
@@ -33,6 +40,9 @@ async fn main() {
         Ok(_) => {
             println!("Cleaning completed in {GREEN}{:?}{RESET}", start.elapsed());
         }
-        Err(e) => eprintln!("Error: {e}"),
+        Err(e) => {
+            eprintln!("Error: {e}");
+            log_message(&format!("{e}"));
+        }
     }
 }

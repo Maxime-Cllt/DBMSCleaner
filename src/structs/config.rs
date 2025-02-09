@@ -15,7 +15,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_json(file_path: &str) -> Result<Self, Error> {
+    pub fn load_config(file_path: &str) -> Result<Self, Error> {
         let path: &Path = Path::new(file_path);
         if !path.exists() {
             return Err(Error::new(
