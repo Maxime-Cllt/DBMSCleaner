@@ -1,7 +1,7 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::structs::config::Config;
 use crate::structs::logger::log_message;
-use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
+use crate::utils::constant::{BLUE, GREEN, RED, RESET};
 use crate::utils::libcleaner::{get_url_connection, merge_schema};
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
@@ -106,9 +106,9 @@ impl PostgresCleaner {
     /// Drop temporary tables created during the cleaning process
     async fn drop_temp_tables(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
         const SQL: &str = "DROP TABLE IF EXISTS pg_temp CASCADE;";
-        match sqlx::query(SQL).execute(pool).await {
-            Ok(_) => {}
-            Err(e) => eprintln!("{RED}Error: {e}{RESET}"),
+        if let Err(e) = sqlx::query(SQL).execute(pool).await {
+            eprintln!("{RED}Error dropping temporary tables: {e}{RESET}");
+            log_message(&format!("Error dropping temporary tables: {e}"));
         }
         Ok(())
     }
@@ -162,7 +162,7 @@ impl PostgresCleaner {
         start_size: i64,
         pool: &Pool<Postgres>,
     ) -> Result<(), Box<dyn Error>> {
-        let end_size: i64 = self.get_size_of_database(pool).await?;
+        let end_size: i64 = self.get_size_of_database(pool).await.unwrap_or(0);
         let diff: i64 = if start_size > end_size {
             start_size - end_size
         } else {
@@ -191,12 +191,9 @@ impl PostgresCleaner {
         for row in all_tables {
             let table_name: String = row.get(QUERY_INDEX);
             let analyze_sql: String = format!("{command}{table_name}");
-            match sqlx::query(&analyze_sql).execute(pool).await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
-                    log_message(&format!("Error for table {table_name}: {e}"));
-                }
+            if let Err(e) = sqlx::query(&analyze_sql).execute(pool).await {
+                eprintln!("{RED}Error executing query: {e}{RESET}");
+                log_message(&format!("Error executing query: {e}"));
             }
         }
     }

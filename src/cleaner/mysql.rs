@@ -89,7 +89,7 @@ impl MySQLCleaner {
         start_size: i64,
         pool: &Pool<MySql>,
     ) -> Result<(), Box<dyn Error>> {
-        let end_size: i64 = Self::get_size_of_database(pool).await?;
+        let end_size: i64 = Self::get_size_of_database(pool).await.unwrap_or(0);
         let diff: i64 = if start_size > end_size {
             start_size - end_size
         } else {
@@ -126,6 +126,8 @@ impl MySQLCleaner {
         const CHECK_TABLE_SQL: &str = "CHECK TABLE ";
         const EXTENDED_SQL: &str = " EXTENDED;";
         const REPAIR_TABLE_SQL: &str = "REPAIR TABLE ";
+        const ALL_TABLES: &str = "all_tables";
+        const MSG_TEXT: &str = "Msg_text";
 
         // Fetch the list of all tables in the schema
         let all_tables: Vec<MySqlRow> =
@@ -134,14 +136,14 @@ impl MySQLCleaner {
                 .await?;
 
         for item in all_tables.iter() {
-            let table_name: String = item.get("all_tables");
+            let table_name: String = item.get(ALL_TABLES);
             let check_sql: String = format!("{CHECK_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
             let result: MySqlRow = pool.fetch_one(&*check_sql).await?;
-            let msg_text: String = result.get("Msg_text");
+            let msg_text: String = result.get(MSG_TEXT);
 
             if msg_text != "OK" {
-                eprintln!("{YELLOW}Table {table_name} needs repair{RESET}");
+                println!("{YELLOW}Table {table_name} needs repair{RESET}");
 
                 let repair_sql: String = format!("{REPAIR_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
@@ -255,14 +257,10 @@ impl MySQLCleaner {
         const QUERY_INDEX: &str = "all_tables";
         for row in all_tables {
             let table_name: String = row.get(QUERY_INDEX);
-            let analyze_sql: String = format!("{command}{table_name}");
-            match sqlx::query(&analyze_sql).execute(pool).await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
-                    log_message(&format!("Error for table {table_name}: {e}"));
-                    continue;
-                }
+            let sql_to_execute: String = format!("{command}{table_name}");
+            if let Err(e) = pool.execute(sql_to_execute.as_str()).await {
+                eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
+                log_message(&format!("Error for table {table_name}: {e}"));
             }
         }
     }
