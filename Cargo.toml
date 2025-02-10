@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Maxime-Cllt/DBMSCleaner.git"
 description = "A simple tool to clean your DMBS in Rust"
-authors = ["Maxime Cllt"]
+authors = ["Maxime-Cllt"]
 
 
 [dependencies]
