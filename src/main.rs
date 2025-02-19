@@ -15,6 +15,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
+
     let config: Config = match Config::load_config("cleaner.json") {
         Ok(config) => config,
         Err(e) => {

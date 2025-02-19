@@ -9,20 +9,18 @@ pub struct Logger {
 
 impl Logger {
     /// Create a new logger object
-    fn new() -> Self {
+    pub(crate) fn new(file_path: &str) -> Self {
         let log_file: File = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open("DBMSCleaner.log")
+            .open(file_path)
             .unwrap();
 
         Self { log_file }
     }
 
     /// Log a message to the log file
-    /// # Arguments
-    /// * `message` - The message to log
-    fn log(&self, message: &str) {
+    pub(crate) fn log(&self, message: &str) {
         let mut log_writer: BufWriter<&File> = BufWriter::new(&self.log_file);
         writeln!(log_writer, "[{}] {message}", chrono::Local::now()).unwrap_or_else(|_| {
             panic!("Failed to write to log file");
@@ -31,11 +29,9 @@ impl Logger {
 }
 
 /// Static logger instance
-pub static LOGGER: Lazy<Mutex<Logger>> = Lazy::new(|| Mutex::new(Logger::new()));
+pub static LOGGER: Lazy<Mutex<Logger>> = Lazy::new(|| Mutex::new(Logger::new("DBMSCleaner.log")));
 
 /// Static function to log a message
-/// # Arguments
-/// * `message` - The message to log
 pub fn log_message(message: &str) {
     let logger: MutexGuard<Logger> = LOGGER.lock().unwrap();
     logger.log(message);

@@ -7,3 +7,4 @@ mod utils_tests;
 mod config_test;
 #[cfg(test)]
 mod postgres_test;
+mod logger_test;

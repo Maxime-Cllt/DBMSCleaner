@@ -2,10 +2,6 @@ use crate::structs::config::Config;
 use crate::utils::constant::{MARIADB, MYSQL, POSTGRES};
 
 /// Merge the schema into a single string
-/// # Arguments
-/// * `schema` - A reference to a str object
-/// # Returns
-/// * A String object
 pub fn merge_schema(schema: &str) -> String {
     schema
         .split(',')
@@ -15,11 +11,6 @@ pub fn merge_schema(schema: &str) -> String {
 }
 
 /// Get the url connection string based on the driver type
-/// # Arguments
-/// * `config` - A reference to a Config object
-/// * `schema` - A reference to a str object
-/// # Returns
-/// * A Result object with the connection string or an error
 pub fn get_url_connection(
     config: &Config,
     schema: &str,
