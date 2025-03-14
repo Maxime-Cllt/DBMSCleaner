@@ -170,10 +170,10 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, cross: false }
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, cross: true }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, cross: true }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, cross: true }
-          - { os: ubuntu-latest, target: riscv64gc-unknown-linux-gnu, cross: true }
+#          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, cross: true }
+#          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, cross: true }
+#          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, cross: true }
+#          - { os: ubuntu-latest, target: riscv64gc-unknown-linux-gnu, cross: true }
 
           - { os: windows-latest, target: x86_64-pc-windows-msvc, cross: false }
           - { os: windows-latest, target: aarch64-pc-windows-msvc, cross: false }
@@ -185,6 +185,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.get-version.outputs.new_tag_version }}
+
+
+      - name: Install OpenSSL (Linux & macOS)
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          # Set the proper directories for OpenSSL on Ubuntu
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+
+      - name: Install OpenSSL (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          choco install openssl
 
 
       - name: Install stable Rust toolchain
@@ -206,29 +222,29 @@ jobs:
       - name: Rename binary (Linux & macOS)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          mv target/${{ matrix.target }}/release/SQLiteCleaner target/${{ matrix.target }}/release/SQLiteCleaner-${{ matrix.target }}
+          mv target/${{ matrix.target }}/release/DBMSCleaner target/${{ matrix.target }}/release/DBMSCleaner-${{ matrix.target }}
 
 
       - name: Rename binary (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          mv target/${{ matrix.target }}/release/SQLiteCleaner.exe target/${{ matrix.target }}/release/SQLiteCleaner-${{ matrix.target }}.exe
+          mv target/${{ matrix.target }}/release/DBMSCleaner.exe target/${{ matrix.target }}/release/DBMSCleaner-${{ matrix.target }}.exe
 
 
       - name: Upload release binary (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         uses: actions/upload-artifact@v4
         with:
-          name: SQLiteCleaner-${{ matrix.target }}.exe
-          path: target/${{ matrix.target }}/release/SQLiteCleaner-${{ matrix.target }}.exe
+          name: DBMSCleaner-${{ matrix.target }}.exe
+          path: target/${{ matrix.target }}/release/DBMSCleaner-${{ matrix.target }}.exe
           compression-level: '9'
 
       - name: Upload release binary (Linux & macOS)
         if: ${{ matrix.os != 'windows-latest' }}
         uses: actions/upload-artifact@v4
         with:
-          name: SQLiteCleaner-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/SQLiteCleaner-${{ matrix.target }}
+          name: DBMSCleaner-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/DBMSCleaner-${{ matrix.target }}
           compression-level: '9'
 
 
