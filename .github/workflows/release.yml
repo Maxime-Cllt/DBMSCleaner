@@ -192,7 +192,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev
-          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV # Set OPENSSL_DIR so openssl-sys can locate OpenSSL
+          # Set the proper directories for OpenSSL on Ubuntu
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
 
       - name: Install OpenSSL (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
