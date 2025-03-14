@@ -20,11 +20,11 @@ impl DatabaseCleaner for MySQLCleaner {
 
         let pool: Pool<MySql> = Pool::connect(&database_url).await?;
         println!("Cleaning {} database...", self.config.driver);
-        let start_size: i64 = Self::get_size_of_database(&pool).await?;
+        let start_bytes_size: i64 = Self::get_size_of_database(&pool).await?;
 
         println!(
             "Size of database at start: {BLUE}{}{RESET} bytes",
-            start_size.to_formatted_string(&Locale::en)
+            start_bytes_size.to_formatted_string(&Locale::en)
         );
 
         println!("Reindexing all tables...");
@@ -39,7 +39,7 @@ impl DatabaseCleaner for MySQLCleaner {
         println!("Clearing logs...");
         Self::clear_logs(&pool).await?;
 
-        self.print_report(start_size, &pool).await?;
+        self.print_report(start_bytes_size, &pool).await?;
         Ok(())
     }
 
@@ -86,26 +86,27 @@ impl MySQLCleaner {
     /// Print the report of the cleaning process
     async fn print_report(
         &self,
-        start_size: i64,
+        start_bytes_size: i64,
         pool: &Pool<MySql>,
     ) -> Result<(), Box<dyn Error>> {
-        let end_size: i64 = Self::get_size_of_database(pool).await.unwrap_or(0);
-        let diff: i64 = if start_size > end_size {
-            start_size - end_size
+        let end_bytes_size: i64 = Self::get_size_of_database(pool).await.unwrap_or(0);
+        let diff: i64 = if start_bytes_size > end_bytes_size {
+            start_bytes_size - end_bytes_size
         } else {
             0
         };
         println!(
             "Size of database at end: {BLUE}{}{RESET} bytes",
-            end_size.to_formatted_string(&Locale::en)
+            end_bytes_size.to_formatted_string(&Locale::en)
         );
         println!(
             "Size of database reduced by: {GREEN}{}{RESET} bytes",
             diff.to_formatted_string(&Locale::en)
         );
-        log_message(&format!(
-            "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}] bytes"
-        ));
+        let json_log: String = format!(
+            r#"{{"from_bytes": {start_bytes_size},"to_bytes": {end_bytes_size},"diff": {diff}}}"#,
+        );
+        log_message(&json_log);
         Ok(())
     }
 
@@ -202,7 +203,9 @@ impl MySQLCleaner {
     /// * A String object containing the SQL query
     pub fn get_all_tables_sql(schema: &str) -> String {
         if schema == "*" {
-            return String::from("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');");
+            return String::from(
+                "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');",
+            );
         }
         let mut query_all_tables: String = String::from(
             "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (",
@@ -219,9 +222,13 @@ impl MySQLCleaner {
     /// * A String object containing the SQL query
     pub fn get_all_inno_db_tables_sql(schema: &str) -> String {
         if schema == "*" {
-            return String::from("SELECT CONCAT('`', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS all_tables FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');");
+            return String::from(
+                "SELECT CONCAT('`', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS all_tables FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');",
+            );
         }
-        let mut query_all_tables: String = String::from("SELECT CONCAT('`', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS all_tables FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA IN (");
+        let mut query_all_tables: String = String::from(
+            "SELECT CONCAT('`', TABLE_SCHEMA, '`.`', TABLE_NAME, '` ENGINE=InnoDB') AS all_tables FROM information_schema.TABLES WHERE ENGINE = 'InnoDB' AND TABLE_SCHEMA IN (",
+        );
         query_all_tables.push_str(merge_schema(schema).as_str());
         query_all_tables.push_str(");");
         query_all_tables
@@ -234,9 +241,13 @@ impl MySQLCleaner {
     /// * A String object containing the SQL query
     pub fn get_all_repair_tables_sql(schema: &str) -> String {
         if schema == "*" {
-            return String::from("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');");
+            return String::from(
+                "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');",
+            );
         }
-        let mut query_all_tables: String = String::from("SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA IN (");
+        let mut query_all_tables: String = String::from(
+            "SELECT CONCAT('`',TABLE_SCHEMA,'`.`', TABLE_NAME, '`') AS all_tables FROM information_schema.TABLES WHERE ENGINE IN ('MyISAM', 'ARCHIVE', 'CSV') AND TABLE_SCHEMA IN (",
+        );
         query_all_tables.push_str(merge_schema(schema).as_str());
         query_all_tables.push_str(");");
         query_all_tables

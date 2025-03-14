@@ -1,10 +1,9 @@
-use std::error::Error;
-use async_trait::async_trait;
 use crate::structs::config::Config;
+use async_trait::async_trait;
+use std::error::Error;
 
 #[async_trait]
 pub trait DatabaseCleaner {
-
     /// Clean the database
     /// # Returns
     /// * A Result containing the size of the database in bytes

@@ -25,10 +25,10 @@ impl DatabaseCleaner for PostgresCleaner {
 
         let database_url: String = get_url_connection(&self.config, &schema_name[0])?;
         let pool_size: Pool<Postgres> = Pool::connect(&database_url).await?;
-        let start_size: i64 = self.get_size_of_database(&pool_size).await?;
+        let start_bytes_size: i64 = self.get_size_of_database(&pool_size).await?;
         println!(
             "Size of database at start: {BLUE}{}{RESET} bytes",
-            start_size.to_formatted_string(&Locale::en)
+            start_bytes_size.to_formatted_string(&Locale::en)
         );
 
         for schema in &schema_name {
@@ -38,13 +38,15 @@ impl DatabaseCleaner for PostgresCleaner {
             self.run(&pool, schema).await?;
         }
 
-        self.print_report(start_size, &pool_size).await?;
+        self.print_report(start_bytes_size, &pool_size).await?;
         Ok(())
     }
 
     fn from_config(config: Config) -> Self {
         Self::new(config)
     }
+
+
 }
 
 impl PostgresCleaner {
@@ -131,20 +133,6 @@ impl PostgresCleaner {
         query_all_tables
     }
 
-    // pub fn get_all_postgres_datname_sql(schema: &str) -> String {
-    //     if schema == "*" {
-    //         return String::from(
-    //             "SELECT datname AS all_tables FROM pg_database WHERE datname NOT IN ('template0', 'template1');",
-    //         );
-    //     }
-    //     let mut query_all_tables: String =
-    //         String::from("SELECT datname AS all_tables FROM pg_database WHERE datname IN (");
-    //     query_all_tables.push_str(merge_schema(schema).as_str());
-    //     query_all_tables.push_str(");");
-    //     println!("{query_all_tables}");
-    //     query_all_tables
-    // }
-
     async fn get_size_of_database(&self, pool: &Pool<Postgres>) -> Result<i64, Box<dyn Error>> {
         const QUERY: &str =
             "SELECT SUM(pg_database_size(datname))::BIGINT AS total_size_bytes FROM pg_database;";
@@ -159,26 +147,28 @@ impl PostgresCleaner {
     /// Print the report of the cleaning process
     async fn print_report(
         &self,
-        start_size: i64,
+        start_bytes_size: i64,
         pool: &Pool<Postgres>,
     ) -> Result<(), Box<dyn Error>> {
-        let end_size: i64 = self.get_size_of_database(pool).await.unwrap_or(0);
-        let diff: i64 = if start_size > end_size {
-            start_size - end_size
+        let end_bytes_size: i64 = self.get_size_of_database(pool).await.unwrap_or(0);
+        let diff: i64 = if start_bytes_size > end_bytes_size {
+            start_bytes_size - end_bytes_size
         } else {
             0
         };
         println!(
             "Size of database at end: {BLUE}{}{RESET} bytes",
-            end_size.to_formatted_string(&Locale::en)
+            end_bytes_size.to_formatted_string(&Locale::en)
         );
         println!(
             "Size of database reduced by: {GREEN}{}{RESET} bytes",
             diff.to_formatted_string(&Locale::en)
         );
-        log_message(&format!(
-            "FROM: [{start_size}] TO: [{end_size}] DIFFERENCE: [{diff}]"
-        ));
+
+        let json_log: String = format!(
+            r#"{{"from_bytes": {start_bytes_size},"to_bytes": {end_bytes_size},"diff": {diff}}}"#,
+        );
+        log_message(&json_log);
         Ok(())
     }
 

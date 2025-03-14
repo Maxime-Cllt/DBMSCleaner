@@ -130,3 +130,13 @@ schemas (except system schemas).
 ### 📜 License
 
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+## 🤝 Contributing
+
+Contributions are welcome! To contribute:
+
+- **Fork the Repository**
+- **Create a Feature Branch**:
+  ```bash
+  git checkout -b feature/your-feature-name
+    ```
