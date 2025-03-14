@@ -1,88 +1,82 @@
-<div align=center>
-<img src="/assets/dbcleaner.png" width="100px" height="100px"  alt="DBCleaner" align="center" />
-<h1>DBMS Cleaner</h1>
+<div align="center">
+    <h1>DBMSCleaner</h1>
 </div>
 
-
 <div align="center">
-    <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+    <img src="https://img.shields.io/badge/Rust-dea584?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
     <img src="https://img.shields.io/badge/Database-Cleaner-53a863?style=for-the-badge" alt="Database Cleaner" />
-    <img src="https://img.shields.io/badge/Version-1.0.2-informational?style=for-the-badge" alt="Version" />
+    <img src="https://img.shields.io/badge/Version-1.0.0-informational?style=for-the-badge" alt="Version" />
 </div>
 
-## Description
+## 📖 Overview
 
-DBMS Cleaner is a program made to be run on the backend of a server or an application to clean the database. It will
-reduce
-the storage of the database and optimise all tables except system tables. It is a simple and efficient way to keep your
-database clean and optimised without having to do it manually. It is a great way to keep your database running in the
-best
-conditions possible. Using Go language, it is compatible with all platforms and can be run on any server or application.
+**DBMS Cleaner** is a lightweight, efficient tool designed to optimize and clean your database. Built with Rust, it
+ensures optimal performance by reducing storage usage and optimizing all tables (except system tables) without altering
+configurations or requiring manual intervention.
 
+Whether you're running a server or an application, DBMS Cleaner keeps your database in peak condition, compatible across
+all major platforms.
 
-## Features
+---
 
-<ul>
-<li>Reduce storage of the database</li>
-<li>Optimise all tables except system tables</li>
-<li>Simple and efficient way to keep your database clean</li>
-<li>Compatible with all platforms</li>
-<li>Maintain your database in the best conditions possible</li>
-<li>Don't require any dump or backup</li>
-<li>Don't modify your files configuration</li>
-<li>Easily run on any server or application</li>
-<li>Easy to use</li>
-</ul>
+## ✨ Key Features
 
+- 🚀 **Efficient Storage Optimization:** Reduce database size by rebuilding indexes.
+- ⚙️ **Table Optimization:** Ensures all tables (excluding system tables) are optimized.
+- 🖥️ **Cross-Platform Support:** Seamlessly run on Windows, MacOS, and Linux.
+- 🛠️ **Simple Integration:** No changes to FILE configurations required.
+- 🛡️ **Safe and Reliable:** Maintains database integrity without the need for backups.
+- 🔧 **Customizable:** Easily configure settings via `config.json`.
+- ⏱️ **Fast Execution:** Run it as a cron job or scheduled task for continuous optimization.
 
-## Supported databases
+---
 
-<div align=center>
-
-![MySQL](https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white)
-![MySQL](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-
-
-</div>
-
-## Platforms & Requirements
+## 🗄️ Supported Databases
 
 <div align="center">
-<img src="https://img.shields.io/badge/OS-MacOS-informational?style=flat&logo=apple&logoColor=white&color=53a863" alt="MacOS" />
-<img src="https://img.shields.io/badge/OS-Linux-informational?style=flat&logo=linux&logoColor=white&color=53a863" alt="Linux" />
-<img src="https://img.shields.io/badge/OS-Windows-informational?style=flat&logo=windows&logoColor=white&color=53a863" alt="Windows" />
+    <img src="https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+    <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
+    <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
 </div>
+
+---
+
+## 💻 Platforms & Requirements
 
 <div align="center">
-<img src="https://img.shields.io/badge/Golang-1.16-informational?style=flat&logo=go&logoColor=white&color=53a863" alt="Golang" />
+    <img src="https://img.shields.io/badge/OS-MacOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="MacOS" />
+    <img src="https://img.shields.io/badge/OS-Linux-228B22?style=for-the-badge&logo=linux&logoColor=white" alt="Linux" />
+    <img src="https://img.shields.io/badge/OS-Windows-0078d4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
 </div>
 
-## Installation
+### 📋 Prerequisites
 
-To run the program :
+- **Rust Compiler** (Install via [Rustup](https://rustup.rs/))
+- **Cargo Package Manager** (Installed with Rust)
+- Supported database drivers: `mysql`, `mariadb`, or `postgres`
 
-1. Clone the repository:
+---
+
+## 🔧 Installation
+
+Follow these steps to get started:
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Maxime-Cllt/DBMSCleaner.git
+cd DBMSCleaner
 ```
 
-2. Import the libraries:
+### 2. Compile the Program
 
 ```bash
-go mod tidy
+cargo build --release
 ```
 
-3. Compile the program:
+### 3. Configure the Connection
 
-```bash
-go build -o DBMSCleaner
-```
-
-4. Run the program with the following your database information:
-
-You need to create a file named `config.json` in the same directory as the program with the following content:
+Create a file named `cleaner.json` in the same directory as the compiled program with the following content:
 
 ```json
 {
@@ -90,52 +84,59 @@ You need to create a file named `config.json` in the same directory as the progr
   "host": "localhost",
   "port": "3306",
   "username": "root",
-  "password": "password",
-  "database": "testdb"
+  "password": "",
+  "schema": "test"
 }
 ```
 
-Replace the values with your database information. This information are only used to connect to the database and
-perform the cleaning.
+You can also include mutliple schemas in the `schema` field, separated by a comma or use the `*` keyword to clean all
+schemas (except system schemas).
 
-5. Then run the program with the following command:
-
-### MacOS & Linux
-
-Change the permission of the file:
-
-```bash
-chmod +x DBMSCleaner
+```json
+"schema": "test1,test2,test3"
 ```
 
-Execute the program:
+### 4. Run the Program
+
+#### For MacOS & Linux:
 
 ```bash
-./DBMSCleaner
+./target/release/DBMSCleaner
 ```
 
-### Windows
-
-Execute the program:
+#### For Windows:
 
 ```bash
-DBMSCleaner.exe
+.\target\release\DBMSCleaner.exe
 ```
 
-## Notes
+---
 
-- Time complexity: O(n) where n is the number of tables in the database
-- Don't clean triggers, stored procedures, functions, and views
-- May not reduce much storage but don't cost much time to run and can be run frequently
-- Require some privileges to connect to the database and to perform the cleaning
+## 📝 Notes
 
-## See Also
+- **Exclusions:** Does not clean triggers, stored procedures, functions, or views.
+- **Privileges Required:** Ensure the program has sufficient privileges to connect and clean the database.
+- **Frequency:** Safe to run frequently for continuous optimization.
 
-<ul>
+---
 
-<li><a href="https://go.dev/">Go</a></li>
-<li><a href="https://golang.org/pkg/database/sql/">Database SQL</a></li>
-<li><a href="https://github.com/Maxime-Cllt/SqliteCleaner">Sqlite Cleaner</a></li>
-</ul>
+## 🔗 See Also
 
+- [SQLiteCleaner](https://github.com/Maxime-Cllt/SqliteCleaner)
+- [Rust Language](https://www.rust-lang.org/)
 
+---
+
+### 📜 License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+## 🤝 Contributing
+
+Contributions are welcome! To contribute:
+
+- **Fork the Repository**
+- **Create a Feature Branch**:
+  ```bash
+  git checkout -b feature/your-feature-name
+    ```
