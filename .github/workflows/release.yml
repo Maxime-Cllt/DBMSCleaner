@@ -188,10 +188,11 @@ jobs:
 
 
       - name: Install OpenSSL (Linux & macOS)
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev
+          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV # Set OPENSSL_DIR so openssl-sys can locate OpenSSL
 
       - name: Install OpenSSL (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
