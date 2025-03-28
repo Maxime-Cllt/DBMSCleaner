@@ -42,7 +42,7 @@ impl DatabaseCleaner for MySQLCleaner {
 
         let end_bytes_size: i64 = Self::get_size_of_database(&pool).await.unwrap_or(0);
 
-        log_report(start_bytes_size, end_bytes_size)?;
+        log_report(start_bytes_size, end_bytes_size);
 
         Ok(())
     }
@@ -59,7 +59,7 @@ impl MySQLCleaner {
 
     /// Clear the logs of the database
     async fn clear_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
-        const SQL_TO_EXECUTE: [&str; 15] = [
+        const SQL_TO_EXECUTE: [&str; 13] = [
             "FLUSH LOGS;",                                                // Flush the logs
             "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 60 DAY);", // Purge old binary logs
             "FLUSH PRIVILEGES;",                                          // Reload privilege tables
@@ -71,14 +71,12 @@ impl MySQLCleaner {
             "RESET QUERY CACHE;",           // Reset query cache memory allocation
             "FLUSH HOSTS;",                 // Reset host cache (useful for connection issues)
             "FLUSH USER_RESOURCES;",        // Reset per-user resource limits
-            "RESET MASTER;",                // Reset the binary log index (use with caution!)
-            "RESET SLAVE ALL;",             // Reset all replication settings (use with caution!)
             "SET GLOBAL innodb_buffer_pool_dump_now = ON;", // Dump InnoDB buffer pool for faster reload
             "SET GLOBAL innodb_buffer_pool_load_now = ON;", // Reload InnoDB buffer pool
         ];
 
-        for sql in SQL_TO_EXECUTE {
-            if let Err(e) = pool.execute(sql).await {
+        for sql in SQL_TO_EXECUTE.iter() {
+            if let Err(e) = pool.execute(*sql).await {
                 log_and_print(&format!("Error executing {sql}: {e}"), LogType::Error);
             }
         }
@@ -244,7 +242,7 @@ impl MySQLCleaner {
         command: &str,
     ) {
         const QUERY_INDEX: &str = "all_tables";
-        for row in all_tables {
+        for row in all_tables.iter() {
             let table_name: String = row.get(QUERY_INDEX);
             let sql_to_execute: String = format!("{command}{table_name}");
             if let Err(e) = pool.execute(sql_to_execute.as_str()).await {

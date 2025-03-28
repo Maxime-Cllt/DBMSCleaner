@@ -52,7 +52,7 @@ impl DatabaseCleaner for PostgresCleaner {
 
         let end_bytes_size: i64 = self.get_size_of_database(&pool_size).await?;
 
-        log_report(start_bytes_size, end_bytes_size)?;
+        log_report(start_bytes_size, end_bytes_size);
 
         Ok(())
     }

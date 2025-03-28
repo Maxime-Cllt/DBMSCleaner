@@ -16,10 +16,7 @@ pub fn merge_schema(schema: &str) -> String {
 }
 
 /// Get the url connection string based on the driver type
-pub fn get_url_connection(
-    config: &Config,
-    schema: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_url_connection(config: &Config, schema: &str) -> Result<String, Box<dyn Error>> {
     match config.driver {
         ConnectionEngine::Mysql | ConnectionEngine::MariaDB => Ok(format!(
             "mysql://{}:{}@{}:{}/",
@@ -34,7 +31,7 @@ pub fn get_url_connection(
 }
 
 /// Print the log report when the cleaner is done
-pub fn log_report(start_bytes_size: i64, end_bytes_size: i64) -> Result<(), Box<dyn Error>> {
+pub fn log_report(start_bytes_size: i64, end_bytes_size: i64) {
     let diff: i64 = if start_bytes_size > end_bytes_size {
         start_bytes_size - end_bytes_size
     } else {
@@ -52,5 +49,4 @@ pub fn log_report(start_bytes_size: i64, end_bytes_size: i64) -> Result<(), Box<
         r#"{{"from_bytes": {start_bytes_size},"to_bytes": {end_bytes_size},"diff": {diff}}}"#,
     );
     log_message(&json_log, LogType::Info);
-    Ok(())
 }
