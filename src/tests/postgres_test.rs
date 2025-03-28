@@ -1,13 +1,13 @@
 use crate::cleaner::postgres::PostgresCleaner;
+use crate::enums::connection_engine::ConnectionEngine;
 use crate::structs::config::Config;
 use crate::tests::config_test::get_test_config;
-use crate::utils::constant::POSTGRES;
 
 #[tokio::test]
 async fn test_postgres_struct() {
-    let config: Config = get_test_config(POSTGRES, "5432");
+    let config: Config = get_test_config(ConnectionEngine::Postgres, "5432");
     let postgres_config: PostgresCleaner = PostgresCleaner::new(config);
-    assert_eq!(postgres_config.config.driver, POSTGRES);
+    assert_eq!(postgres_config.config.driver, ConnectionEngine::Postgres);
     assert_eq!(postgres_config.config.host, "localhost");
     assert_eq!(postgres_config.config.port, "5432");
     assert_eq!(postgres_config.config.username, "root");

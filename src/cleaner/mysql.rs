@@ -1,8 +1,9 @@
 use crate::cleaner::database_cleaner::DatabaseCleaner;
+use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
-use crate::structs::logger::log_message;
-use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
-use crate::utils::libcleaner::{get_url_connection, merge_schema};
+use crate::structs::logger::log_and_print;
+use crate::utils::constant::{BLUE, RESET, YELLOW};
+use crate::utils::libcleaner::{get_url_connection, log_report, merge_schema};
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::mysql::MySqlRow;
@@ -20,7 +21,7 @@ impl DatabaseCleaner for MySQLCleaner {
 
         let pool: Pool<MySql> = Pool::connect(&database_url).await?;
         println!("Cleaning {} database...", self.config.driver);
-        let start_bytes_size: i64 = Self::get_size_of_database(&pool).await?;
+        let start_bytes_size: i64 = Self::get_size_of_database(&pool).await.unwrap_or(0);
 
         println!(
             "Size of database at start: {BLUE}{}{RESET} bytes",
@@ -39,7 +40,10 @@ impl DatabaseCleaner for MySQLCleaner {
         println!("Clearing logs...");
         Self::clear_logs(&pool).await?;
 
-        self.print_report(start_bytes_size, &pool).await?;
+        let end_bytes_size: i64 = Self::get_size_of_database(&pool).await.unwrap_or(0);
+
+        log_report(start_bytes_size, end_bytes_size)?;
+
         Ok(())
     }
 
@@ -55,7 +59,7 @@ impl MySQLCleaner {
 
     /// Clear the logs of the database
     async fn clear_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
-        let sql_to_execute: Vec<&str> = vec![
+        const SQL_TO_EXECUTE: [&str; 15] = [
             "FLUSH LOGS;",                                                // Flush the logs
             "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 60 DAY);", // Purge old binary logs
             "FLUSH PRIVILEGES;",                                          // Reload privilege tables
@@ -73,40 +77,12 @@ impl MySQLCleaner {
             "SET GLOBAL innodb_buffer_pool_load_now = ON;", // Reload InnoDB buffer pool
         ];
 
-        for sql in sql_to_execute {
+        for sql in SQL_TO_EXECUTE {
             if let Err(e) = pool.execute(sql).await {
-                eprintln!("{RED}Error executing {sql}: {e}{RESET}");
-                log_message(&format!("Error executing {sql}: {e}"));
+                log_and_print(&format!("Error executing {sql}: {e}"), LogType::Error);
             }
         }
 
-        Ok(())
-    }
-
-    /// Print the report of the cleaning process
-    async fn print_report(
-        &self,
-        start_bytes_size: i64,
-        pool: &Pool<MySql>,
-    ) -> Result<(), Box<dyn Error>> {
-        let end_bytes_size: i64 = Self::get_size_of_database(pool).await.unwrap_or(0);
-        let diff: i64 = if start_bytes_size > end_bytes_size {
-            start_bytes_size - end_bytes_size
-        } else {
-            0
-        };
-        println!(
-            "Size of database at end: {BLUE}{}{RESET} bytes",
-            end_bytes_size.to_formatted_string(&Locale::en)
-        );
-        println!(
-            "Size of database reduced by: {GREEN}{}{RESET} bytes",
-            diff.to_formatted_string(&Locale::en)
-        );
-        let json_log: String = format!(
-            r#"{{"from_bytes": {start_bytes_size},"to_bytes": {end_bytes_size},"diff": {diff}}}"#,
-        );
-        log_message(&json_log);
         Ok(())
     }
 
@@ -149,8 +125,10 @@ impl MySQLCleaner {
                 let repair_sql: String = format!("{REPAIR_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
                 if let Err(e) = pool.execute(repair_sql.as_str()).await {
-                    eprintln!("{RED}Error repairing table {table_name}: {e}{RESET}");
-                    log_message(&format!("Error repairing table {table_name}: {e}"));
+                    log_and_print(
+                        &format!("Error repairing table {table_name}: {e}"),
+                        LogType::Warning,
+                    );
                 }
             }
         }
@@ -270,8 +248,10 @@ impl MySQLCleaner {
             let table_name: String = row.get(QUERY_INDEX);
             let sql_to_execute: String = format!("{command}{table_name}");
             if let Err(e) = pool.execute(sql_to_execute.as_str()).await {
-                eprintln!("{YELLOW}Error for table {table_name}{RESET}: {e}");
-                log_message(&format!("Error for table {table_name}: {e}"));
+                log_and_print(
+                    &format!("Error for table {table_name}: {e}"),
+                    LogType::Error,
+                );
             }
         }
     }

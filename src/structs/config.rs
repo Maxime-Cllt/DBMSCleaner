@@ -1,12 +1,13 @@
-use crate::utils::constant::{MARIADB, MYSQL, POSTGRES, RED, RESET};
+use crate::enums::connection_engine::ConnectionEngine;
+use crate::utils::constant::{RED, RESET};
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
-    pub driver: String,
+    pub driver: ConnectionEngine,
     pub host: String,
     pub port: String,
     pub username: String,
@@ -15,6 +16,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Load the configuration file
     pub fn load_config(file_path: &str) -> Result<Self, Error> {
         let path: &Path = Path::new(file_path);
         if !path.exists() {
@@ -33,20 +35,13 @@ impl Config {
     }
 
     /// Check if the configuration is valid
-    /// # Arguments
-    /// * `config` - The configuration to check
-    /// # Panics
-    /// Panics if the configuration is invalid
     pub(crate) fn check_config(config: &Config) -> Result<(), Error> {
         let validations = [
             (config.port.parse::<i32>().is_err(), "Port must be a number"),
-            (
-                !(config.driver == MYSQL || config.driver == POSTGRES || config.driver == MARIADB),
-                &format!("Unsupported database driver: {}", config.driver),
-            ),
             (config.host.is_empty(), "Host must not be empty"),
             (config.username.is_empty(), "Username must not be empty"),
             (config.schema.is_empty(), "Schema must not be empty"),
+            (config.driver == ConnectionEngine::Invalid, "Invalid driver"),
         ];
 
         for (condition, message) in validations {
