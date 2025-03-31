@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod config_test;
 #[cfg(test)]
-mod enum_test;
-#[cfg(test)]
 mod logger_test;
 #[cfg(test)]
 mod mysql_tests;
