@@ -5,7 +5,7 @@
 <div align="center">
     <img src="https://img.shields.io/badge/Rust-dea584?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
     <img src="https://img.shields.io/badge/Database-Cleaner-53a863?style=for-the-badge" alt="Database Cleaner" />
-    <img src="https://img.shields.io/badge/Version-1.0.0-informational?style=for-the-badge" alt="Version" />
+    <img src="https://img.shields.io/badge/Version-1.0.2-informational?style=for-the-badge" alt="Version" />
 </div>
 
 ## 📖 Overview

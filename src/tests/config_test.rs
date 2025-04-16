@@ -1,5 +1,6 @@
+use crate::enums::connection_engine::ConnectionEngine;
 use crate::structs::config::Config;
-use crate::utils::constant::{MARIADB, MYSQL, POSTGRES, RED, RESET};
+use crate::utils::constant::{RED, RESET};
 use std::fs::File;
 use std::io::Write;
 
@@ -11,7 +12,9 @@ async fn test_struct_from_file() {
 
     let loaded_config: Config = Config::load_config(CONFIG_TEST_FILE).unwrap();
 
-    assert_eq!(loaded_config.driver, MYSQL);
+    println!("{:?}", loaded_config);
+
+    assert_eq!(loaded_config.driver, ConnectionEngine::Mysql);
     assert_eq!(loaded_config.host, "localhost");
     assert_eq!(loaded_config.port, "3306");
     assert_eq!(loaded_config.username, "root");
@@ -23,8 +26,8 @@ async fn test_struct_from_file() {
 
 #[tokio::test]
 async fn test_struct() {
-    let test_config: Config = get_test_config(MYSQL, "3306");
-    assert_eq!(test_config.driver, MYSQL);
+    let test_config: Config = get_test_config(ConnectionEngine::Mysql, "3306");
+    assert_eq!(test_config.driver, ConnectionEngine::Mysql);
     assert_eq!(test_config.host, "localhost");
     assert_eq!(test_config.port, "3306");
     assert_eq!(test_config.username, "root");
@@ -34,45 +37,53 @@ async fn test_struct() {
 
 #[tokio::test]
 async fn test_check_config() {
-    assert!(Config::check_config(&Config {
-        driver: String::from(MYSQL),
-        host: String::from("localhost"),
-        port: String::from("3306"),
-        username: String::from("root"),
-        password: String::from("password"),
-        schema: String::from("test"),
-    })
-    .is_ok());
+    assert!(
+        Config::check_config(&Config {
+            driver: ConnectionEngine::Postgres,
+            host: String::from("localhost"),
+            port: String::from("3306"),
+            username: String::from("root"),
+            password: String::from("password"),
+            schema: String::from("test"),
+        })
+        .is_ok()
+    );
 
-    assert!(Config::check_config(&Config {
-        driver: String::from(POSTGRES),
-        host: String::from("localhost"),
-        port: String::from("5432"),
-        username: String::from("root"),
-        password: String::from("password"),
-        schema: String::from("test, test2"),
-    })
-    .is_ok());
+    assert!(
+        Config::check_config(&Config {
+            driver: ConnectionEngine::MariaDB,
+            host: String::from("localhost"),
+            port: String::from("3306"),
+            username: String::from("root"),
+            password: String::from("password"),
+            schema: String::from("test"),
+        })
+        .is_ok()
+    );
 
-    assert!(Config::check_config(&Config {
-        driver: String::from(MARIADB),
-        host: String::from("localhost"),
-        port: String::from("3306"),
-        username: String::from("root"),
-        password: String::from("password"),
-        schema: String::from("test, test2"),
-    })
-    .is_ok());
+    assert!(
+        Config::check_config(&Config {
+            driver: ConnectionEngine::Postgres,
+            host: String::from("localhost"),
+            port: String::from("3306"),
+            username: String::from("root"),
+            password: String::from("password"),
+            schema: String::from("test"),
+        })
+        .is_ok()
+    );
 
-    assert!(Config::check_config(&Config {
-        driver: String::from("invalid"),
-        host: String::from("localhost"),
-        port: String::from("3306"),
-        username: String::from("root"),
-        password: String::from("password"),
-        schema: String::from("test"),
-    })
-    .is_err());
+    assert!(
+        Config::check_config(&Config {
+            driver: ConnectionEngine::Invalid,
+            host: String::from("localhost"),
+            port: String::from("3306"),
+            username: String::from("root"),
+            password: String::from("password"),
+            schema: String::from("test"),
+        })
+        .is_err()
+    );
 }
 
 fn generate_test_file_config(file_name: &str) {
@@ -98,9 +109,9 @@ fn delete_test_file_config(file_name: &str) {
     }
 }
 
-pub fn get_test_config(driver: &str, port: &str) -> Config {
+pub fn get_test_config(driver: ConnectionEngine, port: &str) -> Config {
     Config {
-        driver: String::from(driver),
+        driver,
         host: String::from("localhost"),
         port: String::from(port),
         username: String::from("root"),
