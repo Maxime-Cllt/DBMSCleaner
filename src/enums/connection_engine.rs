@@ -52,10 +52,12 @@ mod tests {
         let mysql: ConnectionEngine = serde_json::from_str("\"mysql\"").unwrap();
         let mariadb: ConnectionEngine = serde_json::from_str("\"mariadb\"").unwrap();
         let invalid: ConnectionEngine = serde_json::from_str("\"invalid\"").unwrap();
+        let invalid_empty: ConnectionEngine = serde_json::from_str("\"\"").unwrap();
 
         assert_eq!(postgres, ConnectionEngine::Postgres);
         assert_eq!(mysql, ConnectionEngine::Mysql);
         assert_eq!(mariadb, ConnectionEngine::MariaDB);
         assert_eq!(invalid, ConnectionEngine::Invalid);
+        assert_eq!(invalid_empty, ConnectionEngine::Invalid);
     }
 }

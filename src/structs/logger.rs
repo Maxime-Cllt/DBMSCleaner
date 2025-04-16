@@ -45,11 +45,12 @@ pub fn log_message(message: &str, log_type: LogType) {
     logger.log(message, log_type);
 }
 
+/// Static function to log a message and print it to the console
 pub fn log_and_print(message: &str, log_type: LogType) {
     match log_type {
-        LogType::Critical | LogType::Error => eprintln!("{RED}{}{RESET}", message),
-        LogType::Warning => println!("{YELLOW}{}{RESET}", message),
-        _ => println!("{}", message),
+        LogType::Critical | LogType::Error => eprintln!("{RED}{message}{RESET}"),
+        LogType::Warning => println!("{YELLOW}{message}{RESET}"),
+        _ => println!("{message}"),
     }
     log_message(message, log_type);
 }

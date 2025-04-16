@@ -17,15 +17,12 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    let config: Config = match Config::load_config("cleaner.json") {
-        Ok(config) => config,
-        Err(e) => {
-            log_and_print(&format!("{e}"), LogType::Critical);
-            std::process::exit(1);
-        }
-    };
-
     let start: Instant = Instant::now();
+
+    let config: Config = Config::load_config("cleaner.json").unwrap_or_else(|e| {
+        log_and_print(&format!("{e}"), LogType::Critical);
+        std::process::exit(1);
+    });
 
     let cleaner: Box<dyn DatabaseCleaner> = match config.driver {
         ConnectionEngine::MariaDB | ConnectionEngine::Mysql => {
