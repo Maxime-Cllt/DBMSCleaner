@@ -120,6 +120,17 @@ schemas (except system schemas).
 
 ---
 
+## 📊 Performance and Results
+
+I use this program to clean my database every night. Here is a graph that show the size of my database before and after
+the cleaning process.
+
+<div align="center">
+    <img src="assets/Graph.png" width="50%" height="50%" alt="Graph" />
+</div>
+
+```bash
+
 ## 🔗 See Also
 
 - [SQLiteCleaner](https://github.com/Maxime-Cllt/SqliteCleaner)
