@@ -125,11 +125,12 @@ schemas (except system schemas).
 I use this program to clean my database every night. Here is a graph that show the size of my database before and after
 the cleaning process.
 
+### Size benefit
+
 <div align="center">
     <img src="assets/Graph.png" width="50%" height="50%" alt="Graph" />
 </div>
 
-```bash
 
 ## 🔗 See Also
 
