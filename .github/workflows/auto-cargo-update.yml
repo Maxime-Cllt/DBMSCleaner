@@ -1,8 +1,6 @@
 name: Auto Cargo Update
 
 on:
-  push:
-    branches: [ "auto-update-ci" ]
   schedule:
     - cron: '0 3 */30 * *'
   workflow_dispatch:
@@ -28,7 +26,7 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             git add Cargo.lock
             git commit -m "chore(deps): auto cargo update"
-            git push origin auto-update-ci:main
+            git push
           else
             echo "No changes to commit"
           fi
