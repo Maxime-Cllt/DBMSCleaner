@@ -14,6 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: "main"
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run cargo update
@@ -27,7 +28,7 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             git add Cargo.lock
             git commit -m "chore(deps): auto cargo update"
-            git push
+            git push origin auto-update-ci:main
           else
             echo "No changes to commit"
           fi
