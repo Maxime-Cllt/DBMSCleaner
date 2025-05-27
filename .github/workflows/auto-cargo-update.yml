@@ -1,0 +1,36 @@
+name: Auto Cargo Update
+
+on:
+  schedule:
+    - cron: '0 3 */30 * *'
+  workflow_dispatch:
+
+jobs:
+  cargo-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: "main"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run cargo update
+        run: cargo update
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add Cargo.lock
+            git commit -m "chore(deps): auto cargo update"
+            git push
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Run tests
+        run: cargo test --locked
+
