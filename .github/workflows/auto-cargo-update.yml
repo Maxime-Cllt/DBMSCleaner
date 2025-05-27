@@ -1,6 +1,8 @@
 name: Auto Cargo Update
 
 on:
+  push:
+    branches: [ "auto-update-ci" ]
   schedule:
     - cron: '0 3 */30 * *'
   workflow_dispatch:
