@@ -11,17 +11,7 @@ on:
     inputs:
       version:
         type: string
-        description: "Version: (e.g. -> v1.0.0)"
-      release_type:
-        type: choice
-        default: none
-        options:
-          - none
-          - patch
-          - minor
-          - major
-        description:
-          "Release type: none, patch, minor, major"
+        description: "Version: (e.g. -> v2024.12.25)"
       publish:
         type: boolean
         description: "Publish release"
@@ -32,9 +22,7 @@ on:
     inputs:
       version:
         type: string
-        description: "Version: (e.g. -> v1.0.0)"
-      release_type:
-        type: string
+        description: "Version: (e.g. -> v2024.12.25)"
       publish:
         type: boolean
       overwrite_tag:
@@ -49,7 +37,7 @@ jobs:
       - name: Validate input
         id: regex-match
         run: |
-          if [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${{ github.event_name }}" == "push" ]]; then
+          if [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]] || [[ "${{ github.event_name }}" == "push" ]]; then
             echo "match=true" >> "$GITHUB_OUTPUT";
           else
             echo "match=false" >> "$GITHUB_OUTPUT";
@@ -70,35 +58,36 @@ jobs:
         with:
           tool: jql
 
-      - name: Install cargo-bump
-        if: ${{ !inputs.version }}
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-bump
-
-      - name: Get latest tag for push builds
-        id: latest_tag
+      - name: Get date-based version for push builds
+        id: date_version
         if: ${{ github.event_name == 'push' }}
         run: |
-          # Get the latest tag
-          latest_tag=$(git tag -l "v*" | sort -V | tail -n1)
-          if [ -z "$latest_tag" ]; then
-            latest_tag="v1.0.0"
-          fi
-          echo "Latest tag: $latest_tag"
-          echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+          # Get current date in yyyy.mm.dd format
+          current_date=$(date +"%Y.%m.%d")
+          base_tag="v${current_date}"
+          echo "Base tag: $base_tag"
           
-          # Find the highest increment for this base version
-          base_version=$latest_tag
-          highest_increment=$(git tag -l "${base_version}-*" | sed "s/${base_version}-//" | sort -n | tail -n1)
+          # Check if tag already exists and find the highest increment
+          existing_tags=$(git tag -l "${base_tag}*" | sort -V)
           
-          if [ -z "$highest_increment" ]; then
-            new_increment=1
+          if [ -z "$existing_tags" ]; then
+            # No existing tag for today, use base tag
+            new_tag="$base_tag"
+            new_increment=0
           else
-            new_increment=$((highest_increment + 1))
+            # Find the highest increment for today
+            highest_increment=$(echo "$existing_tags" | sed "s/${base_tag}//" | sed 's/^-//' | grep -E '^[0-9]+$' | sort -n | tail -n1)
+          
+            if [ -z "$highest_increment" ]; then
+              # Base tag exists but no increments
+              new_increment=1
+            else
+              new_increment=$((highest_increment + 1))
+            fi
+          
+            new_tag="${base_tag}-${new_increment}"
           fi
           
-          new_tag="${base_version}-${new_increment}"
           echo "New tag: $new_tag"
           echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
           
@@ -107,42 +96,39 @@ jobs:
           echo "Crate version: $crate_version"
           echo "crate_version=$crate_version" >> "$GITHUB_OUTPUT"
 
-      - name: Versions using None
-        id: none_version
-        if: ${{ !inputs.version && inputs.release_type == 'none' && github.event_name != 'push' }}
+      - name: Get manual version or generate date version
+        id: manual_or_date_version
+        if: ${{ github.event_name != 'push' }}
         run: |
-          version=$(cargo metadata --format-version=1 --no-deps | jql '"packages"|>"version"<|[0]' --raw-string);
-          echo $version;
-          echo "crate_version=$version" >> "$GITHUB_OUTPUT";
-          normal_version=v$version
-          echo $normal_version;
-          echo "tag_version=$normal_version" >> "$GITHUB_OUTPUT";
+          if [ -n "${{ inputs.version }}" ]; then
+            # Use provided version
+            tag="${{ inputs.version }}"
+            echo "Using provided version: $tag"
+          else
+            # Generate date-based version
+            current_date=$(date +"%Y.%m.%d")
+            tag="v${current_date}"
+            echo "Generated date version: $tag"
+          fi
+          
+          echo "tag_version=$tag" >> "$GITHUB_OUTPUT"
+          
+          # Extract version without 'v' prefix for crate version
+          crate_version=$(echo $tag | sed 's/^v//')
+          echo "Crate version: $crate_version"
+          echo "crate_version=$crate_version" >> "$GITHUB_OUTPUT"
 
-      - name: Versions using release_type
-        id: new_version
-        if: ${{ !inputs.version && inputs.release_type != 'none' && github.event_name != 'push' }}
+      - name: Update Cargo.toml version
+        if: ${{ github.event_name != 'push' }}
         run: |
-          cargo bump ${{ inputs.release_type }};
-          version=$(cargo metadata --format-version=1 --no-deps | jql '"packages"|>"version"<|[0]' --raw-string);
-          echo $version;
-          echo "crate_version=$version" >> "$GITHUB_OUTPUT";
-          normal_version=v$version
-          echo $normal_version;
-          echo "tag_version=$normal_version" >> "$GITHUB_OUTPUT";
-
-      - name: Versions using tag
-        id: full_version
-        if: ${{ inputs.version && github.event_name != 'push' }}
-        run: |
-          tag=${{inputs.version}};
-          echo $tag;
-          echo "crate_version=${tag##v}" >> "$GITHUB_OUTPUT";
-          echo ${tag##v};
-          echo "tag_version=$tag" >> "$GITHUB_OUTPUT";
+          version="${{ steps.manual_or_date_version.outputs.crate_version }}"
+          # Update version in Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+          echo "Updated Cargo.toml version to: $version"
 
     outputs:
-      new_tag_version: ${{ steps.latest_tag.outputs.new_tag || inputs.version || steps.new_version.outputs.tag_version || steps.none_version.outputs.tag_version }}
-      new_crate_version: ${{ steps.latest_tag.outputs.crate_version || steps.full_version.outputs.crate_version || steps.new_version.outputs.crate_version || steps.none_version.outputs.crate_version }}
+      new_tag_version: ${{ steps.date_version.outputs.new_tag || steps.manual_or_date_version.outputs.tag_version }}
+      new_crate_version: ${{ steps.date_version.outputs.crate_version || steps.manual_or_date_version.outputs.crate_version }}
 
   create-tag:
     needs: [ get-version ]
@@ -196,7 +182,7 @@ jobs:
           changelog: CHANGELOG.md
           allow-missing-changelog: true
           ref: refs/tags/${{ needs.get-version.outputs.new_tag_version }}
-          prerelease: ${{ github.event_name == 'push' }}
+          prerelease: false
 
   build-and-upload:
     needs: [ get-version, create-tag ]
@@ -207,10 +193,6 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, cross: false }
-          #          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, cross: true }
-          #          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, cross: true }
-          #          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, cross: true }
-          #          - { os: ubuntu-latest, target: riscv64gc-unknown-linux-gnu, cross: true }
 
           - { os: windows-latest, target: x86_64-pc-windows-msvc, cross: false }
           - { os: windows-latest, target: aarch64-pc-windows-msvc, cross: false }
@@ -295,6 +277,6 @@ jobs:
           tag_name: ${{ needs.get-version.outputs.new_tag_version }}
           name: ${{ needs.get-version.outputs.new_tag_version }}
           draft: false
-          prerelease: ${{ github.event_name == 'push' }}
+          prerelease: false
           files: artifacts/**/*
           token: ${{ secrets.GITHUB_TOKEN }}
