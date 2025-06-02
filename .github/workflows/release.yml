@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     branches:
-      - auto-build
+      - main
   workflow_dispatch:
     inputs:
       version:
