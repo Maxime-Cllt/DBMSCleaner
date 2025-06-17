@@ -1,4 +1,3 @@
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
@@ -9,6 +8,7 @@ use num_format::{Locale, ToFormattedString};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
+use crate::traits::database_cleaner::DatabaseCleaner;
 
 pub struct PostgresCleaner {
     pub config: Config,

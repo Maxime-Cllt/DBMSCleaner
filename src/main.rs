@@ -1,10 +1,10 @@
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::cleaner::mysql::MySQLCleaner;
 use crate::cleaner::postgres::PostgresCleaner;
 use crate::enums::connection_engine::ConnectionEngine;
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
+use crate::traits::database_cleaner::DatabaseCleaner;
 use crate::utils::constant::{GREEN, RESET};
 use std::time::Instant;
 
@@ -14,6 +14,7 @@ mod structs;
 #[cfg(test)]
 mod tests;
 mod utils;
+mod traits;
 
 #[tokio::main]
 async fn main() {

@@ -1,7 +1,7 @@
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
+use crate::traits::database_cleaner::DatabaseCleaner;
 use crate::utils::constant::{BLUE, RESET, YELLOW};
 use crate::utils::libcleaner::{get_url_connection, log_report, merge_schema};
 use async_trait::async_trait;
