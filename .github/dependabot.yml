@@ -1,0 +1,107 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Allow both direct and indirect updates
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    # Set commit message preferences
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    # Limit the number of open pull requests
+    open-pull-requests-limit: 15
+    # Set pull request labels
+    labels:
+      - "dependencies"
+      - "rust"
+    # Set reviewers and assignees
+    reviewers:
+      - "Maxime-Cllt"
+    assignees:
+      - "Maxime-Cllt"
+    # Group related dependencies together
+    groups:
+      # Core Rust ecosystem
+      tokio-ecosystem:
+        patterns:
+          - "tokio*"
+          - "tokio-*"
+          - "tower*"
+          - "hyper*"
+          - "reqwest*"
+      # Serialization libraries
+      serialization:
+        patterns:
+          - "serde*"
+          - "serde_*"
+          - "bincode*"
+          - "toml*"
+          - "json*"
+          - "csv*"
+          - "yaml*"
+      # CLI and terminal libraries
+      cli-tools:
+        patterns:
+          - "clap*"
+          - "structopt*"
+          - "termion*"
+          - "crossterm*"
+          - "console*"
+          - "indicatif*"
+          - "dialoguer*"
+      # Error handling
+      error-handling:
+        patterns:
+          - "anyhow*"
+          - "thiserror*"
+          - "eyre*"
+          - "miette*"
+      # Logging and tracing
+      logging:
+        patterns:
+          - "log*"
+          - "env_logger*"
+          - "tracing*"
+          - "tracing-*"
+          - "slog*"
+      # Testing utilities
+      testing:
+        patterns:
+          - "proptest*"
+          - "quickcheck*"
+          - "mockall*"
+          - "criterion*"
+          - "rstest*"
+      # Database related
+      database:
+        patterns:
+          - "sqlx*"
+          - "diesel*"
+          - "sea-orm*"
+          - "rusqlite*"
+          - "redis*"
+          - "mongodb*"
+      # Crypto and security
+      crypto:
+        patterns:
+          - "ring*"
+          - "rustls*"
+          - "openssl*"
+          - "sha2*"
+          - "rand*"
+          - "uuid*"
+      # Date and time
+      datetime:
+        patterns:
+          - "chrono*"
+          - "time*"
+    target-branch: "main"
+    versioning-strategy: "auto"

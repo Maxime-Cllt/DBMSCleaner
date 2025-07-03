@@ -20,7 +20,7 @@ mod traits;
 async fn main() {
     let start: Instant = Instant::now();
 
-    let config: Config = Config::load_config("cleaner.json").unwrap_or_else(|e| {
+    let config: Config = Config::from_file("cleaner.json").unwrap_or_else(|e| {
         log_and_print(&format!("{e}"), LogType::Critical);
         std::process::exit(1);
     });

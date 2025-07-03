@@ -17,7 +17,7 @@ pub struct Config {
 
 impl Config {
     /// Load the configuration file
-    pub fn load_config(file_path: &str) -> Result<Self, Error> {
+    pub fn from_file(file_path: &str) -> Result<Self, Error> {
         let path: &Path = Path::new(file_path);
         if !path.exists() {
             return Err(Error::new(
