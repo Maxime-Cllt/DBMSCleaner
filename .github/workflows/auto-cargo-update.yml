@@ -2,7 +2,7 @@ name: Auto Cargo Update
 
 on:
   schedule:
-    - cron: '0 3 */30 * *'
+    - cron: '0 3 */30 * *' # Runs every 30 days at 3 AM UTC
   workflow_dispatch:
 
 jobs:

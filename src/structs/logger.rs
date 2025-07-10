@@ -1,6 +1,5 @@
 use crate::enums::log_type::LogType;
 use crate::utils::constant::{RED, RESET, YELLOW};
-use once_cell::sync::Lazy;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::{Mutex, MutexGuard};
@@ -22,7 +21,7 @@ impl Logger {
     }
 
     /// Log a message to the log file
-    pub(crate) fn log(&self, message: &str, log_type: LogType) {
+    pub(crate) fn log(&self, message: &str, log_type: &LogType) {
         let mut log_writer: BufWriter<&File> = BufWriter::new(&self.log_file);
         writeln!(
             log_writer,
@@ -37,20 +36,20 @@ impl Logger {
 }
 
 /// Static logger instance
-pub static LOGGER: Lazy<Mutex<Logger>> = Lazy::new(|| Mutex::new(Logger::new("DBMSCleaner.log")));
+pub static LOGGER: std::sync::LazyLock<Mutex<Logger>> = std::sync::LazyLock::new(|| Mutex::new(Logger::new("DBMSCleaner.log")));
 
 /// Static function to log a message
-pub fn log_message(message: &str, log_type: LogType) {
+pub fn log_message(message: &str, log_type: &LogType) {
     let logger: MutexGuard<Logger> = LOGGER.lock().unwrap();
     logger.log(message, log_type);
 }
 
 /// Static function to log a message and print it to the console
-pub fn log_and_print(message: &str, log_type: LogType) {
+pub fn log_and_print(message: &str, log_type: &LogType) {
     match log_type {
         LogType::Critical | LogType::Error => eprintln!("{RED}{message}{RESET}"),
         LogType::Warning => println!("{YELLOW}{message}{RESET}"),
-        _ => println!("{message}"),
+        LogType::Info => println!("{message}"),
     }
     log_message(message, log_type);
 }

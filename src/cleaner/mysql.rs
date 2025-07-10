@@ -1,7 +1,7 @@
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
+use crate::traits::database_cleaner::DatabaseCleaner;
 use crate::utils::constant::{BLUE, RESET, YELLOW};
 use crate::utils::libcleaner::{get_url_connection, log_report, merge_schema};
 use async_trait::async_trait;
@@ -10,6 +10,7 @@ use sqlx::mysql::MySqlRow;
 use sqlx::{Executor, MySql, Pool, Row};
 use std::error::Error;
 
+#[non_exhaustive]
 pub struct MySQLCleaner {
     pub config: Config,
 }
@@ -53,11 +54,15 @@ impl DatabaseCleaner for MySQLCleaner {
 }
 
 impl MySQLCleaner {
-    pub fn new(config: Config) -> Self {
-        MySQLCleaner { config }
+    /// Create a new instance of `MySQLCleaner` with the given configuration
+    #[inline]
+    #[must_use]
+    pub const fn new(config: Config) -> Self {
+        Self { config }
     }
 
     /// Clear the logs of the database
+    #[inline]
     async fn clear_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         const SQL_TO_EXECUTE: [&str; 13] = [
             "FLUSH LOGS;",                                                // Flush the logs
@@ -75,16 +80,16 @@ impl MySQLCleaner {
             "SET GLOBAL innodb_buffer_pool_load_now = ON;", // Reload InnoDB buffer pool
         ];
 
-        for sql in SQL_TO_EXECUTE.iter() {
+        for sql in &SQL_TO_EXECUTE {
             if let Err(e) = pool.execute(*sql).await {
-                log_and_print(&format!("Error executing {sql}: {e}"), LogType::Error);
+                log_and_print(&format!("Error executing {sql}: {e}"), &LogType::Error);
             }
         }
 
         Ok(())
     }
 
-    /// Execute the ALTER TABLE command on all tables with the InnoDB engine
+    /// Execute the ALTER TABLE command on all tables with the `InnoDB` engine
     async fn reindex_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         let all_tables: Vec<MySqlRow> =
             sqlx::query(&Self::get_all_inno_db_tables_sql(&self.config.schema))
@@ -97,6 +102,7 @@ impl MySQLCleaner {
     }
 
     /// Execute the REPAIR TABLE command only if necessary
+    #[inline]
     async fn check_and_repair_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         const CHECK_TABLE_SQL: &str = "CHECK TABLE ";
         const EXTENDED_SQL: &str = " EXTENDED;";
@@ -110,7 +116,7 @@ impl MySQLCleaner {
                 .fetch_all(pool)
                 .await?;
 
-        for item in all_tables.iter() {
+        for item in &all_tables {
             let table_name: String = item.get(ALL_TABLES);
             let check_sql: String = format!("{CHECK_TABLE_SQL}{table_name}{EXTENDED_SQL}");
 
@@ -125,7 +131,7 @@ impl MySQLCleaner {
                 if let Err(e) = pool.execute(repair_sql.as_str()).await {
                     log_and_print(
                         &format!("Error repairing table {table_name}: {e}"),
-                        LogType::Warning,
+                        &LogType::Warning,
                     );
                 }
             }
@@ -135,6 +141,7 @@ impl MySQLCleaner {
     }
 
     /// Execute the ANALYZE TABLE command on all tables
+    #[inline]
     async fn analyse_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
         let all_tables: Vec<MySqlRow> = self.get_tables_from_schema(pool).await?;
 
@@ -144,10 +151,7 @@ impl MySQLCleaner {
     }
 
     /// Get the size of the database in bytes
-    /// # Arguments
-    /// * `pool` - A reference to a sqlx::Pool<MySql> object
-    /// # Returns
-    /// * A Result containing the size of the database in bytes
+    #[inline]
     async fn get_size_of_database(pool: &Pool<MySql>) -> Result<i64, Box<dyn Error>> {
         const SIZE_SQL: &str = "SELECT CAST(SUM(data_length + index_length) AS SIGNED) AS 'size'
                                 FROM information_schema.TABLES
@@ -158,10 +162,7 @@ impl MySQLCleaner {
     }
 
     /// Get all tables in the specified schema
-    /// # Arguments
-    /// * `pool` - A reference to a sqlx::Pool<MySql> object
-    /// # Returns
-    /// * A Result containing a Vec<MySqlRow> object
+    #[inline]
     async fn get_tables_from_schema(
         &self,
         pool: &Pool<MySql>,
@@ -173,10 +174,7 @@ impl MySQLCleaner {
     }
 
     /// Get all tables in the specified schema
-    /// # Arguments
-    /// * `schema` - A reference to a String object
-    /// # Returns
-    /// * A String object containing the SQL query
+    #[inline]
     pub fn get_all_tables_sql(schema: &str) -> String {
         if schema == "*" {
             return String::from(
@@ -191,11 +189,8 @@ impl MySQLCleaner {
         query_all_tables
     }
 
-    /// Get all tables that need to be reindexed (InnoDB)
-    /// # Arguments
-    /// * `schema` - A reference to a String object
-    /// # Returns
-    /// * A String object containing the SQL query
+    /// Get all tables that need to be reindexed (`InnoDB`)
+    #[inline]
     pub fn get_all_inno_db_tables_sql(schema: &str) -> String {
         if schema == "*" {
             return String::from(
@@ -210,11 +205,8 @@ impl MySQLCleaner {
         query_all_tables
     }
 
-    /// Get all tables that need to be repaired (MyISAM, ARCHIVE, CSV)
-    /// # Arguments
-    /// * `schema` - A reference to a String object
-    /// # Returns
-    /// * A String object containing the SQL query
+    /// Get all tables that need to be repaired (`MyISAM`, `ARCHIVE`, `CSV`)
+    #[inline]
     pub fn get_all_repair_tables_sql(schema: &str) -> String {
         if schema == "*" {
             return String::from(
@@ -230,25 +222,20 @@ impl MySQLCleaner {
     }
 
     /// Loop through all tables and execute the specified command
-    /// # Arguments
-    /// * `pool` - A reference to a sqlx::Pool<MySql> object
-    /// * `all_tables` - A reference to a Vec<MySqlRow> object
-    /// * `command` - A reference to a String object
-    /// # Returns
-    /// * A Result containing the size of the database in bytes
+    #[inline]
     pub async fn loop_and_execute_query_my_sql(
         pool: &Pool<MySql>,
         all_tables: &[MySqlRow],
         command: &str,
     ) {
         const QUERY_INDEX: &str = "all_tables";
-        for row in all_tables.iter() {
+        for row in all_tables {
             let table_name: String = row.get(QUERY_INDEX);
             let sql_to_execute: String = format!("{command}{table_name}");
             if let Err(e) = pool.execute(sql_to_execute.as_str()).await {
                 log_and_print(
                     &format!("Error for table {table_name}: {e}"),
-                    LogType::Error,
+                    &LogType::Error,
                 );
             }
         }

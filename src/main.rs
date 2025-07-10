@@ -1,10 +1,10 @@
-use crate::cleaner::database_cleaner::DatabaseCleaner;
 use crate::cleaner::mysql::MySQLCleaner;
 use crate::cleaner::postgres::PostgresCleaner;
 use crate::enums::connection_engine::ConnectionEngine;
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
+use crate::traits::database_cleaner::DatabaseCleaner;
 use crate::utils::constant::{GREEN, RESET};
 use std::time::Instant;
 
@@ -13,14 +13,15 @@ mod enums;
 mod structs;
 #[cfg(test)]
 mod tests;
+mod traits;
 mod utils;
 
 #[tokio::main]
 async fn main() {
     let start: Instant = Instant::now();
 
-    let config: Config = Config::load_config("cleaner.json").unwrap_or_else(|e| {
-        log_and_print(&format!("{e}"), LogType::Critical);
+    let config: Config = Config::from_file("cleaner.json").unwrap_or_else(|e| {
+        log_and_print(&format!("{e}"), &LogType::Critical);
         std::process::exit(1);
     });
 
@@ -32,18 +33,18 @@ async fn main() {
         ConnectionEngine::Invalid => {
             log_and_print(
                 &format!("Unsupported database driver: {:?}", config.driver),
-                LogType::Critical,
+                &LogType::Critical,
             );
             std::process::exit(1);
         }
     };
 
     match cleaner.clean().await {
-        Ok(_) => {
+        Ok(()) => {
             println!("Cleaning completed in {GREEN}{:?}{RESET}", start.elapsed());
         }
         Err(e) => {
-            log_and_print(&format!("{e}"), LogType::Critical);
+            log_and_print(&format!("{e}"), &LogType::Critical);
         }
     }
 }

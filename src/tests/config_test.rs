@@ -10,9 +10,9 @@ async fn test_struct_from_file() {
 
     generate_test_file_config(CONFIG_TEST_FILE);
 
-    let loaded_config: Config = Config::load_config(CONFIG_TEST_FILE).unwrap();
+    let loaded_config: Config = Config::from_file(CONFIG_TEST_FILE).unwrap();
 
-    println!("{:?}", loaded_config);
+    println!("{loaded_config:?}");
 
     assert_eq!(loaded_config.driver, ConnectionEngine::Mysql);
     assert_eq!(loaded_config.host, "localhost");
@@ -102,7 +102,7 @@ fn generate_test_file_config(file_name: &str) {
 
 fn delete_test_file_config(file_name: &str) {
     match std::fs::remove_file(file_name) {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(_) => {
             println!("{RED}Error deleting file{file_name}{RESET}",);
         }

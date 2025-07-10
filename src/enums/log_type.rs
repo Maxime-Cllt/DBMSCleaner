@@ -6,12 +6,14 @@ pub enum LogType {
 }
 
 impl LogType {
-    pub fn as_str(&self) -> &str {
+    /// Returns the string representation of the log type
+    #[inline]
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            LogType::Info => "INFO",
-            LogType::Warning => "WARNING",
-            LogType::Error => "ERROR",
-            LogType::Critical => "CRITICAL",
+            Self::Info => "INFO",
+            Self::Warning => "WARNING",
+            Self::Error => "ERROR",
+            Self::Critical => "CRITICAL",
         }
     }
 }

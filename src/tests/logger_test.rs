@@ -7,7 +7,7 @@ async fn test_logger() {
     let logger: Logger = Logger::new(LOG_FILE);
     assert!(std::path::Path::new(LOG_FILE).exists());
 
-    logger.log("Test message", LogType::Info);
+    logger.log("Test message", &LogType::Info);
 
     let log_contents: String = std::fs::read_to_string(LOG_FILE).unwrap_or_default();
 
