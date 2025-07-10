@@ -27,15 +27,15 @@ impl Config {
         }
         let file: File = File::open(file_path)?;
         let reader: BufReader<File> = BufReader::new(file);
-        let config: Config = serde_json::from_reader(reader)?;
+        let config: Self = serde_json::from_reader(reader)?;
 
-        Config::check_config(&config).expect("Invalid configuration file");
+        Self::check_config(&config).expect("Invalid configuration file");
 
         Ok(config)
     }
 
     /// Check if the configuration is valid
-    pub(crate) fn check_config(config: &Config) -> Result<(), Error> {
+    pub(crate) fn check_config(config: &Self) -> Result<(), Error> {
         let validations = [
             (config.port.parse::<i32>().is_err(), "Port must be a number"),
             (config.host.is_empty(), "Host must not be empty"),

@@ -13,15 +13,15 @@ mod enums;
 mod structs;
 #[cfg(test)]
 mod tests;
-mod utils;
 mod traits;
+mod utils;
 
 #[tokio::main]
 async fn main() {
     let start: Instant = Instant::now();
 
     let config: Config = Config::from_file("cleaner.json").unwrap_or_else(|e| {
-        log_and_print(&format!("{e}"), LogType::Critical);
+        log_and_print(&format!("{e}"), &LogType::Critical);
         std::process::exit(1);
     });
 
@@ -33,18 +33,18 @@ async fn main() {
         ConnectionEngine::Invalid => {
             log_and_print(
                 &format!("Unsupported database driver: {:?}", config.driver),
-                LogType::Critical,
+                &LogType::Critical,
             );
             std::process::exit(1);
         }
     };
 
     match cleaner.clean().await {
-        Ok(_) => {
+        Ok(()) => {
             println!("Cleaning completed in {GREEN}{:?}{RESET}", start.elapsed());
         }
         Err(e) => {
-            log_and_print(&format!("{e}"), LogType::Critical);
+            log_and_print(&format!("{e}"), &LogType::Critical);
         }
     }
 }

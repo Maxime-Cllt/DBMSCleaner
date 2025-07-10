@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer};
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ConnectionEngine {
     Postgres,
     Mysql,
@@ -16,10 +16,10 @@ impl<'de> Deserialize<'de> for ConnectionEngine {
     {
         let s: String = String::deserialize(deserializer)?;
         match s.to_lowercase().as_str() {
-            "postgres" => Ok(ConnectionEngine::Postgres),
-            "mysql" => Ok(ConnectionEngine::Mysql),
-            "mariadb" => Ok(ConnectionEngine::MariaDB),
-            _ => Ok(ConnectionEngine::Invalid),
+            "postgres" => Ok(Self::Postgres),
+            "mysql" => Ok(Self::Mysql),
+            "mariadb" => Ok(Self::MariaDB),
+            _ => Ok(Self::Invalid),
         }
     }
 }
@@ -27,10 +27,10 @@ impl<'de> Deserialize<'de> for ConnectionEngine {
 impl Display for ConnectionEngine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConnectionEngine::Postgres => write!(f, "Postgres"),
-            ConnectionEngine::Mysql => write!(f, "Mysql"),
-            ConnectionEngine::MariaDB => write!(f, "MariaDB"),
-            ConnectionEngine::Invalid => write!(f, "Invalid"),
+            Self::Postgres => write!(f, "Postgres"),
+            Self::Mysql => write!(f, "Mysql"),
+            Self::MariaDB => write!(f, "MariaDB"),
+            Self::Invalid => write!(f, "Invalid"),
         }
     }
 }

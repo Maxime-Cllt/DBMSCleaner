@@ -1,6 +1,7 @@
 use crate::enums::log_type::LogType;
 use crate::structs::config::Config;
 use crate::structs::logger::log_and_print;
+use crate::traits::database_cleaner::DatabaseCleaner;
 use crate::utils::constant::{BLUE, RESET};
 use crate::utils::libcleaner::{get_url_connection, log_report, merge_schema};
 use async_trait::async_trait;
@@ -8,8 +9,8 @@ use num_format::{Locale, ToFormattedString};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
-use crate::traits::database_cleaner::DatabaseCleaner;
 
+#[non_exhaustive]
 pub struct PostgresCleaner {
     pub config: Config,
 }
@@ -39,11 +40,11 @@ impl DatabaseCleaner for PostgresCleaner {
         } else {
             merge_schema(&self.config.schema)
                 .split(',')
-                .map(|s| s.replace("'", "").trim().into())
+                .map(|s| s.replace('\'', "").trim().into())
                 .collect()
         };
 
-        for schema in schema_name.iter() {
+        for schema in &schema_name {
             println!("Cleaning schema: {schema}");
             let database_url: String = get_url_connection(&self.config, schema)?;
             let pool: Pool<Postgres> = Pool::connect(&database_url).await?;
@@ -63,8 +64,11 @@ impl DatabaseCleaner for PostgresCleaner {
 }
 
 impl PostgresCleaner {
-    pub fn new(config: Config) -> Self {
-        PostgresCleaner { config }
+    /// Create a new `PostgresCleaner` instance with the given configuration
+    #[inline]
+    #[must_use]
+    pub const fn new(config: Config) -> Self {
+        Self { config }
     }
 
     /// Execute the cleaning process into a single function to avoid query repetition
@@ -76,7 +80,7 @@ impl PostgresCleaner {
             {
                 Ok(rows) => rows,
                 Err(e) => {
-                    log_and_print(&format!("Error fetching tables: {e}"), LogType::Error);
+                    log_and_print(&format!("Error fetching tables: {e}"), &LogType::Error);
                     return Err(Box::new(e));
                 }
             };
@@ -95,6 +99,7 @@ impl PostgresCleaner {
 
     /// Execute the REINDEX command on all tables in the database
     /// REINDEX rebuilds one or more indices in a database
+    #[inline]
     async fn reindex_all_database(
         &self,
         pool: &Pool<Postgres>,
@@ -105,7 +110,8 @@ impl PostgresCleaner {
     }
 
     /// Execute the VACUUM command on all tables in the database
-    /// VACUUM reclaims storage occupied by dead tuples. In normal PostgreSQL operation, tuples that are deleted or obsoleted by an update are not physically removed from their table; they remain present until a VACUUM is done.
+    /// VACUUM reclaims storage occupied by dead tuples. In normal `PostgreSQL` operation, tuples that are deleted or obsoleted by an update are not physically removed from their table; they remain present until a VACUUM is done.
+    #[inline]
     async fn vacuum_databases(
         &self,
         pool: &Pool<Postgres>,
@@ -116,7 +122,8 @@ impl PostgresCleaner {
     }
 
     /// Execute the ANALYZE command on all tables in the database
-    /// ANALYZE is used to update statistics used by the PostgreSQL query planner to determine the most efficient way to execute a query
+    /// ANALYZE is used to update statistics used by the `PostgreSQL` query planner to determine the most efficient way to execute a query
+    #[inline]
     async fn analyze_tables(
         &self,
         pool: &Pool<Postgres>,
@@ -127,18 +134,20 @@ impl PostgresCleaner {
     }
 
     /// Drop temporary tables created during the cleaning process
+    #[inline]
     async fn drop_temp_tables(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
         const SQL: &str = "DROP TABLE IF EXISTS pg_temp CASCADE;";
         if let Err(e) = sqlx::query(SQL).execute(pool).await {
             log_and_print(
                 &format!("Error dropping temporary tables: {e}"),
-                LogType::Error,
+                &LogType::Error,
             );
         }
         Ok(())
     }
 
-    /// Get all tables that need to be reindexed in PostgreSQL
+    /// Get all tables that need to be reindexed in `PostgreSQL`
+    #[inline]
     pub fn get_all_postgres_tables_sql(schema: &str) -> String {
         if schema == "*" {
             return String::from(
@@ -153,6 +162,7 @@ impl PostgresCleaner {
     }
 
     /// Get the size of the database in bytes
+    #[inline]
     async fn get_size_of_database(&self, pool: &Pool<Postgres>) -> Result<i64, Box<dyn Error>> {
         const QUERY: &str =
             "SELECT SUM(pg_database_size(datname))::BIGINT AS total_size_bytes FROM pg_database;";
@@ -164,25 +174,27 @@ impl PostgresCleaner {
         Ok(row.0)
     }
 
-    /// Get all databases in the PostgreSQL server
+    /// Get all databases in the `PostgreSQL` server
+    #[inline]
     async fn get_all_datnames(&self, pool: &Pool<Postgres>) -> Result<Vec<String>, Box<dyn Error>> {
         const QUERY: &str =
             "SELECT datname FROM pg_database WHERE datname NOT IN ('template0', 'template1');";
         let rows: Vec<PgRow> = match sqlx::query(QUERY).fetch_all(pool).await {
             Ok(rows) => rows,
             Err(e) => {
-                log_and_print(&format!("Error fetching databases: {e}"), LogType::Error);
+                log_and_print(&format!("Error fetching databases: {e}"), &LogType::Error);
                 return Err(Box::new(e));
             }
         };
         let mut databases: Vec<String> = Vec::with_capacity(rows.len());
-        for row in rows.iter() {
+        for row in &rows {
             databases.push(row.get("datname"));
         }
         Ok(databases)
     }
 
     /// Loop through all tables and execute a query
+    #[inline]
     pub async fn loop_and_execute_query_postgres(
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
@@ -193,7 +205,7 @@ impl PostgresCleaner {
             let table_name: String = row.get(QUERY_INDEX);
             let analyze_sql: String = format!("{command}{table_name}");
             if let Err(e) = sqlx::query(&analyze_sql).execute(pool).await {
-                log_and_print(&format!("Error executing query: {e}"), LogType::Error);
+                log_and_print(&format!("Error executing query: {e}"), &LogType::Error);
             }
         }
     }

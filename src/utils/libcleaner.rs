@@ -26,7 +26,7 @@ pub fn get_url_connection(config: &Config, schema: &str) -> Result<String, Box<d
             "postgresql://{}:{}@{}:{}/{}",
             config.username, config.password, config.host, config.port, schema
         )),
-        _ => Err("Invalid driver".into()),
+        ConnectionEngine::Invalid => Err("Invalid driver".into()),
     }
 }
 
@@ -48,5 +48,5 @@ pub fn log_report(start_bytes_size: i64, end_bytes_size: i64) {
     let json_log: String = format!(
         r#"{{"from_bytes": {start_bytes_size},"to_bytes": {end_bytes_size},"diff": {diff}}}"#,
     );
-    log_message(&json_log, LogType::Info);
+    log_message(&json_log, &LogType::Info);
 }
