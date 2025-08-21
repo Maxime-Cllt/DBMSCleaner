@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
 
+/// Represents the configuration for the database connection.
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub driver: ConnectionEngine,

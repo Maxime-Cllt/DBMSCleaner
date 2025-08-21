@@ -1,3 +1,6 @@
+
+/// Enum representing different types of logs
+#[repr(u8)]
 pub enum LogType {
     Info,
     Warning,
@@ -8,6 +11,7 @@ pub enum LogType {
 impl LogType {
     /// Returns the string representation of the log type
     #[inline]
+    #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Info => "INFO",
