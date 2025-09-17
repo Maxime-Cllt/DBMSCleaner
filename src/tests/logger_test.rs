@@ -1,5 +1,5 @@
-use crate::enums::log_type::LogType;
-use crate::structs::logger::Logger;
+use libcleaner::enums::log_type::LogType;
+use libcleaner::structs::logger::Logger;
 
 #[tokio::test]
 async fn test_logger() {

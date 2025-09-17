@@ -1,6 +1,6 @@
-use crate::cleaner::mysql::MySQLCleaner;
-use crate::enums::connection_engine::ConnectionEngine;
-use crate::structs::config::Config;
+use libcleaner::cleaner::mysql::MySQLCleaner;
+use libcleaner::enums::connection_engine::ConnectionEngine;
+use libcleaner::structs::config::Config;
 use crate::tests::config_test::get_test_config;
 
 #[tokio::test]
