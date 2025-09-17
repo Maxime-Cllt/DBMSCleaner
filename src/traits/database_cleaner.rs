@@ -24,9 +24,8 @@ pub trait DatabaseCleaner {
 mod tests {
     use super::*;
 
-    struct DummyCleaner {
-        config: Config,
-    }
+    #[allow(dead_code)]
+    struct DummyCleaner(Config);
 
     #[async_trait]
     impl DatabaseCleaner for DummyCleaner {
@@ -35,7 +34,7 @@ mod tests {
         }
 
         fn from_config(config: Config) -> Self {
-            Self { config }
+            DummyCleaner(config)
         }
     }
 

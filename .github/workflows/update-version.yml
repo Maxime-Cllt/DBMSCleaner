@@ -1,8 +1,8 @@
-name: Update Version Badge
+name: Update Version Badge in Markdown Files
 
 on:
   push:
-    branches: [ main, master, "v1.0.3" ]
+    branches: [ main, master, v1.0.3 ]
     paths: [ 'Cargo.toml' ] # Trigger only when Cargo.toml changes
   workflow_dispatch:
 
