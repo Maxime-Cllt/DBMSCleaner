@@ -5,7 +5,9 @@ use std::fs::File;
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
 
+/// Represents the configuration for the database connection.
 #[derive(Deserialize, Debug)]
+#[must_use]
 pub struct Config {
     pub driver: ConnectionEngine,
     pub host: String,
@@ -35,7 +37,7 @@ impl Config {
     }
 
     /// Check if the configuration is valid
-    pub(crate) fn check_config(config: &Self) -> Result<(), Error> {
+    pub fn check_config(config: &Self) -> Result<(), Error> {
         let validations = [
             (config.port.parse::<i32>().is_err(), "Port must be a number"),
             (config.host.is_empty(), "Host must not be empty"),

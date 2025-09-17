@@ -4,13 +4,15 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::{Mutex, MutexGuard};
 
+/// Logger struct to handle logging functionality
+#[must_use]
 pub struct Logger {
     log_file: File,
 }
 
 impl Logger {
     /// Create a new logger object
-    pub(crate) fn new(file_path: &str) -> Self {
+    pub fn new(file_path: &str) -> Self {
         let log_file: File = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -21,7 +23,7 @@ impl Logger {
     }
 
     /// Log a message to the log file
-    pub(crate) fn log(&self, message: &str, log_type: &LogType) {
+    pub fn log(&self, message: &str, log_type: &LogType) {
         let mut log_writer: BufWriter<&File> = BufWriter::new(&self.log_file);
         writeln!(
             log_writer,
@@ -36,7 +38,8 @@ impl Logger {
 }
 
 /// Static logger instance
-pub static LOGGER: std::sync::LazyLock<Mutex<Logger>> = std::sync::LazyLock::new(|| Mutex::new(Logger::new("DBMSCleaner.log")));
+pub static LOGGER: std::sync::LazyLock<Mutex<Logger>> =
+    std::sync::LazyLock::new(|| Mutex::new(Logger::new("DBMSCleaner.log")));
 
 /// Static function to log a message
 pub fn log_message(message: &str, log_type: &LogType) {

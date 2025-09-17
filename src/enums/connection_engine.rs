@@ -1,7 +1,9 @@
 use serde::{Deserialize, Deserializer};
 use std::fmt::Display;
 
+/// Represents the database connection engine type.
 #[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum ConnectionEngine {
     Postgres,
     Mysql,

@@ -1,3 +1,5 @@
+/// Enum representing different types of logs
+#[repr(u8)]
 pub enum LogType {
     Info,
     Warning,
@@ -8,6 +10,7 @@ pub enum LogType {
 impl LogType {
     /// Returns the string representation of the log type
     #[inline]
+    #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Info => "INFO",
@@ -35,4 +38,13 @@ mod tests {
         assert_eq!(LogType::Error.as_str(), "ERROR");
         assert_eq!(LogType::Critical.as_str(), "CRITICAL");
     }
+
+    #[tokio::test]
+    async fn test_log_type_display() {
+        assert_eq!(format!("{}", LogType::Info), "INFO");
+        assert_eq!(format!("{}", LogType::Warning), "WARNING");
+        assert_eq!(format!("{}", LogType::Error), "ERROR");
+        assert_eq!(format!("{}", LogType::Critical), "CRITICAL");
+    }
+
 }

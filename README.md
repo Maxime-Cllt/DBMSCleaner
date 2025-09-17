@@ -112,6 +112,17 @@ schemas (except system schemas).
 
 ---
 
+## 🧪 Code Quality
+
+### Unit Tests available
+
+To ensure the reliability of the DBMS Cleaner, unit tests are included. You can run the tests using Cargo:
+
+
+```bash
+cargo test
+```
+
 ## 📝 Notes
 
 - **Exclusions:** Does not clean triggers, stored procedures, functions, or views.

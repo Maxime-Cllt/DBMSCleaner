@@ -19,3 +19,36 @@ pub trait DatabaseCleaner {
     where
         Self: Sized;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[allow(dead_code)]
+    struct DummyCleaner(Config);
+
+    #[async_trait]
+    impl DatabaseCleaner for DummyCleaner {
+        async fn clean(&self) -> Result<(), Box<dyn Error>> {
+            Ok(())
+        }
+
+        fn from_config(config: Config) -> Self {
+            DummyCleaner(config)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_dummy_cleaner() {
+        let config = Config {
+            driver: crate::enums::connection_engine::ConnectionEngine::Invalid,
+            username: "user".to_string(),
+            password: "pass".to_string(),
+            host: "localhost".to_string(),
+            port: "5432".to_string(),
+            schema: "test".to_string(),
+        };
+        let cleaner = DummyCleaner::from_config(config);
+        assert!(cleaner.clean().await.is_ok());
+    }
+}

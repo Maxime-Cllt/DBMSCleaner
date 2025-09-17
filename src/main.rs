@@ -1,20 +1,12 @@
-use crate::cleaner::mysql::MySQLCleaner;
-use crate::cleaner::postgres::PostgresCleaner;
-use crate::enums::connection_engine::ConnectionEngine;
-use crate::enums::log_type::LogType;
-use crate::structs::config::Config;
-use crate::structs::logger::log_and_print;
-use crate::traits::database_cleaner::DatabaseCleaner;
-use crate::utils::constant::{GREEN, RESET};
+use libcleaner::cleaner::mysql::MySQLCleaner;
+use libcleaner::cleaner::postgres::PostgresCleaner;
+use libcleaner::enums::connection_engine::ConnectionEngine;
+use libcleaner::enums::log_type::LogType;
+use libcleaner::structs::config::Config;
+use libcleaner::structs::logger::log_and_print;
+use libcleaner::traits::database_cleaner::DatabaseCleaner;
+use libcleaner::utils::constant::{GREEN, RESET};
 use std::time::Instant;
-
-mod cleaner;
-mod enums;
-mod structs;
-#[cfg(test)]
-mod tests;
-mod traits;
-mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +14,7 @@ async fn main() {
 
     let config: Config = Config::from_file("cleaner.json").unwrap_or_else(|e| {
         log_and_print(&format!("{e}"), &LogType::Critical);
-        std::process::exit(1);
+        panic!("Failed to read configuration file");
     });
 
     let cleaner: Box<dyn DatabaseCleaner> = match config.driver {
@@ -35,7 +27,7 @@ async fn main() {
                 &format!("Unsupported database driver: {:?}", config.driver),
                 &LogType::Critical,
             );
-            std::process::exit(1);
+            panic!("Unsupported database driver");
         }
     };
 
