@@ -2,7 +2,7 @@ name: Update Version Badge
 
 on:
   push:
-    branches: [ main, master, "1.0.3" ]
+    branches: [ main, master, "v1.0.3" ]
     paths: [ 'Cargo.toml' ] # Trigger only when Cargo.toml changes
   workflow_dispatch:
 

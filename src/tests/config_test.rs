@@ -1,6 +1,7 @@
-use libcleaner::enums::connection_engine::ConnectionEngine;
-use libcleaner::structs::config::Config;
-use libcleaner::utils::constant::{RED, RESET};
+use crate::utils::constant::RESET;
+use crate::utils::constant::RED;
+use crate::enums::connection_engine::ConnectionEngine;
+use crate::structs::config::Config;
 use std::fs::File;
 use std::io::Write;
 

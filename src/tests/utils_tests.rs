@@ -1,8 +1,8 @@
-use libcleaner::enums::connection_engine::ConnectionEngine;
-use libcleaner::structs::config::Config;
-use libcleaner::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
-use libcleaner::utils::libcleaner::{get_url_connection, merge_schema};
+use crate::enums::connection_engine::ConnectionEngine;
+use crate::structs::config::Config;
 use crate::tests::config_test::get_test_config;
+use crate::utils::constant::{BLUE, GREEN, RED, RESET, YELLOW};
+use crate::utils::libcleaner::{get_url_connection, merge_schema};
 
 #[tokio::test]
 async fn test_merge_schema() {

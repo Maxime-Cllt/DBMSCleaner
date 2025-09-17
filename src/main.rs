@@ -8,9 +8,6 @@ use libcleaner::traits::database_cleaner::DatabaseCleaner;
 use libcleaner::utils::constant::{GREEN, RESET};
 use std::time::Instant;
 
-#[cfg(test)]
-mod tests;
-
 #[tokio::main]
 async fn main() {
     let start: Instant = Instant::now();
