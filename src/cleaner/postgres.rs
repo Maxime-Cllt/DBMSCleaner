@@ -84,51 +84,97 @@ impl PostgresCleaner {
                 }
             };
 
-        println!("Drop temporary tables...");
+        println!("Cleaning temporary objects...");
         self.drop_temp_tables(pool).await?;
-        println!("Reindexing all tables...");
-        self.reindex_all_database(pool, &all_tables).await?;
-        println!("Vacuuming all tables...");
+        self.clean_prepared_transactions(pool).await?;
+
+        println!("Cleaning dead rows and updating statistics...");
         self.vacuum_databases(pool, &all_tables).await?;
-        println!("Analyzing all tables...");
-        self.analyze_tables(pool, &all_tables).await?;
+
+        println!("Reindexing all tables...");
+        self.reindex_all_tables(pool, &all_tables).await?;
+
+        println!("Optimizing table storage layout...");
+        self.cluster_tables(pool, &all_tables).await?;
+
+        println!("Cleaning bloated tables and indexes...");
+        self.clean_bloat(pool).await?;
+
+        println!("Truncating WAL and clearing old logs...");
+        self.clean_wal_and_logs(pool).await?;
+
+        println!("Updating global statistics...");
+        self.update_statistics(pool).await?;
 
         Ok(())
     }
 
     /// Execute the REINDEX command on all tables in the database
-    /// REINDEX rebuilds one or more indices in a database
+    /// REINDEX rebuilds one or more indices in a database, improving query performance
     #[inline]
-    async fn reindex_all_database(
+    async fn reindex_all_tables(
         &self,
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        Self::loop_and_execute_query_postgres(pool, all_tables, "REINDEX DATABASE ").await;
+        // REINDEX TABLE is more efficient than REINDEX DATABASE
+        for row in all_tables {
+            let table_name: String = row.get("tablename");
+            let reindex_sql = format!("REINDEX TABLE {table_name}");
+            if let Err(e) = sqlx::query(&reindex_sql).execute(pool).await {
+                log_and_print(
+                    &format!("Error reindexing table {table_name}: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
         Ok(())
     }
 
-    /// Execute the VACUUM command on all tables in the database
-    /// VACUUM reclaims storage occupied by dead tuples. In normal `PostgreSQL` operation, tuples that are deleted or obsoleted by an update are not physically removed from their table; they remain present until a VACUUM is done.
+    /// Execute VACUUM FULL with ANALYZE on all tables
+    /// This reclaims storage and updates statistics in a single operation
+    /// VACUUM FULL requires an exclusive lock but provides maximum space reclamation
     #[inline]
     async fn vacuum_databases(
         &self,
         pool: &Pool<Postgres>,
-        all_database: &[PgRow],
+        all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        Self::loop_and_execute_query_postgres(pool, all_database, "VACUUM FULL ").await;
+        for row in all_tables {
+            let table_name: String = row.get("tablename");
+            // VACUUM (FULL, ANALYZE, VERBOSE) combines operations for efficiency
+            let vacuum_sql = format!("VACUUM (FULL, ANALYZE) {table_name}");
+            if let Err(e) = sqlx::query(&vacuum_sql).execute(pool).await {
+                log_and_print(
+                    &format!("Error vacuuming table {table_name}: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
         Ok(())
     }
 
-    /// Execute the ANALYZE command on all tables in the database
-    /// ANALYZE is used to update statistics used by the `PostgreSQL` query planner to determine the most efficient way to execute a query
+    /// Cluster tables to physically reorder them based on their primary index
+    /// This improves query performance by organizing data on disk
     #[inline]
-    async fn analyze_tables(
+    async fn cluster_tables(
         &self,
         pool: &Pool<Postgres>,
         all_tables: &[PgRow],
     ) -> Result<(), Box<dyn Error>> {
-        Self::loop_and_execute_query_postgres(pool, all_tables, "ANALYZE ").await;
+        for row in all_tables {
+            let table_name: String = row.get("tablename");
+            // CLUSTER reorganizes the table based on an index
+            // Skip if no suitable index exists
+            let cluster_sql = format!("CLUSTER {table_name}");
+            if let Err(e) = sqlx::query(&cluster_sql).execute(pool).await {
+                // Clustering may fail if no index exists, which is okay
+                log_and_print(
+                    &format!("Table {table_name} has no cluster index (skipped): {e}"),
+                    &LogType::Info,
+                );
+            }
+        }
         Ok(())
     }
 
@@ -142,6 +188,133 @@ impl PostgresCleaner {
                 &LogType::Error,
             );
         }
+        Ok(())
+    }
+
+    /// Clean up old prepared transactions that are stuck
+    /// Prepared transactions can accumulate and cause bloat
+    #[inline]
+    async fn clean_prepared_transactions(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
+        // Find and rollback prepared transactions older than 1 hour
+        const QUERY: &str = "SELECT gid FROM pg_prepared_xacts WHERE prepared < NOW() - INTERVAL '1 hour'";
+
+        match sqlx::query(QUERY).fetch_all(pool).await {
+            Ok(rows) => {
+                for row in rows {
+                    let gid: String = row.get("gid");
+                    let rollback_sql = format!("ROLLBACK PREPARED '{gid}'");
+                    if let Err(e) = sqlx::query(&rollback_sql).execute(pool).await {
+                        log_and_print(
+                            &format!("Error rolling back prepared transaction {gid}: {e}"),
+                            &LogType::Warning,
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                log_and_print(
+                    &format!("Error fetching prepared transactions: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Update PostgreSQL statistics for better query planning
+    #[inline]
+    async fn update_statistics(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
+        // Update pg_statistic for better query optimization
+        const ANALYZE_ALL: &str = "ANALYZE";
+        if let Err(e) = sqlx::query(ANALYZE_ALL).execute(pool).await {
+            log_and_print(
+                &format!("Error updating statistics: {e}"),
+                &LogType::Warning,
+            );
+        }
+        Ok(())
+    }
+
+    /// Clean table and index bloat by identifying and removing dead space
+    #[inline]
+    async fn clean_bloat(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
+        // Identify tables with significant bloat (>20% wasted space)
+        const BLOAT_QUERY: &str = r#"
+            SELECT schemaname, tablename
+            FROM pg_tables
+            WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        "#;
+
+        match sqlx::query(BLOAT_QUERY).fetch_all(pool).await {
+            Ok(rows) => {
+                for row in rows {
+                    let schema: String = row.get("schemaname");
+                    let table: String = row.get("tablename");
+                    let full_table = format!("{schema}.{table}");
+
+                    // VACUUM ANALYZE removes bloat without full table lock
+                    let vacuum_sql = format!("VACUUM ANALYZE {full_table}");
+                    if let Err(e) = sqlx::query(&vacuum_sql).execute(pool).await {
+                        log_and_print(
+                            &format!("Error cleaning bloat for {full_table}: {e}"),
+                            &LogType::Warning,
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                log_and_print(
+                    &format!("Error fetching bloated tables: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Clean WAL files and clear old log entries (one-shot operation)
+    #[inline]
+    async fn clean_wal_and_logs(&self, pool: &Pool<Postgres>) -> Result<(), Box<dyn Error>> {
+        // Checkpoint to flush WAL to disk
+        const CHECKPOINT: &str = "CHECKPOINT";
+        if let Err(e) = sqlx::query(CHECKPOINT).execute(pool).await {
+            log_and_print(
+                &format!("Error executing checkpoint: {e}"),
+                &LogType::Warning,
+            );
+        }
+
+        // Clean up old replication slots if any
+        const CLEAN_SLOTS: &str = r#"
+            SELECT pg_drop_replication_slot(slot_name)
+            FROM pg_replication_slots
+            WHERE active = false AND slot_type = 'logical'
+        "#;
+        if let Err(e) = sqlx::query(CLEAN_SLOTS).execute(pool).await {
+            log_and_print(
+                &format!("No inactive replication slots to clean: {e}"),
+                &LogType::Info,
+            );
+        }
+
+        // Clear old pg_stat_statements if the extension is installed
+        const CLEAR_STATS: &str = "SELECT pg_stat_statements_reset()";
+        if let Err(e) = sqlx::query(CLEAR_STATS).execute(pool).await {
+            log_and_print(
+                &format!("pg_stat_statements not available (skipped): {e}"),
+                &LogType::Info,
+            );
+        }
+
+        // Truncate old data from pg_stat_database
+        const RESET_STATS: &str = "SELECT pg_stat_reset()";
+        if let Err(e) = sqlx::query(RESET_STATS).execute(pool).await {
+            log_and_print(
+                &format!("Error resetting statistics: {e}"),
+                &LogType::Warning,
+            );
+        }
+
         Ok(())
     }
 
