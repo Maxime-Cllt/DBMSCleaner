@@ -24,7 +24,8 @@ impl DatabaseCleaner for PostgresCleaner {
         } else {
             let first_schema: String = merge_schema(&self.config.schema);
             let first_schema: &str = first_schema.split(',').next().unwrap();
-            get_url_connection(&self.config, first_schema)?
+            let first_schema_clean = first_schema.replace('\'', "");
+            get_url_connection(&self.config, &first_schema_clean)?
         };
 
         let pool_size: Pool<Postgres> = Pool::connect(&database_url).await?;
