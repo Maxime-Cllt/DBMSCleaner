@@ -42,9 +42,11 @@ mod tests {
     #[tokio::test]
     async fn test_dummy_cleaner() {
         let config = Config {
+            name: None,
             driver: ConnectionEngine::Invalid,
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             host: "localhost".to_string(),
             port: "5432".to_string(),
             schema: "test".to_string(),

@@ -28,17 +28,29 @@ impl DatabaseCleaner for MySQLCleaner {
             start_bytes_size.to_formatted_string(&Locale::en)
         );
 
-        println!("Reindexing all tables...");
-        self.reindex_all_tables(&pool).await?;
+        println!("Cleaning temporary tables and connections...");
+        self.clean_temporary_objects(&pool).await?;
 
-        println!("Repairing all tables...");
+        println!("Optimizing all tables (defrag + analyze + repair)...");
+        self.optimize_all_tables(&pool).await?;
+
+        println!("Checking and repairing tables if needed...");
         self.check_and_repair_tables(&pool).await?;
 
-        println!("Analysing all tables...");
+        println!("Rebuilding indexes for InnoDB tables...");
+        self.reindex_all_tables(&pool).await?;
+
+        println!("Updating table statistics...");
         self.analyse_all_tables(&pool).await?;
 
-        println!("Clearing logs...");
-        Self::clear_logs(&pool).await?;
+        println!("Flushing caches and logs...");
+        Self::flush_caches(&pool).await?;
+
+        println!("Purging old binary and slow query logs...");
+        Self::purge_logs(&pool).await?;
+
+        println!("Resetting statistics...");
+        Self::reset_statistics(&pool).await?;
 
         let end_bytes_size: i64 = Self::get_size_of_database(&pool).await.unwrap_or(0);
 
@@ -60,28 +72,143 @@ impl MySQLCleaner {
         Self { config }
     }
 
-    /// Clear the logs of the database
+    /// Clean temporary tables and kill sleeping connections
     #[inline]
-    async fn clear_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
-        const SQL_TO_EXECUTE: [&str; 13] = [
-            "FLUSH LOGS;",                                                // Flush the logs
-            "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 60 DAY);", // Purge old binary logs
-            "FLUSH PRIVILEGES;",                                          // Reload privilege tables
-            "FLUSH TABLES;",                                              // Close all tables
-            "FLUSH TABLES WITH READ LOCK;", // Close all tables and lock them
-            "UNLOCK TABLES;",               // Unlock tables
-            "FLUSH STATUS;",                // Reset status variables
-            "FLUSH QUERY CACHE;",           // Clear the query cache
-            "RESET QUERY CACHE;",           // Reset query cache memory allocation
-            "FLUSH HOSTS;",                 // Reset host cache (useful for connection issues)
-            "FLUSH USER_RESOURCES;",        // Reset per-user resource limits
-            "SET GLOBAL innodb_buffer_pool_dump_now = ON;", // Dump InnoDB buffer pool for faster reload
-            "SET GLOBAL innodb_buffer_pool_load_now = ON;", // Reload InnoDB buffer pool
+    async fn clean_temporary_objects(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        // Drop temporary tables
+        const DROP_TEMP: &str = "DROP TEMPORARY TABLE IF EXISTS temp_tables";
+        if let Err(e) = pool.execute(DROP_TEMP).await {
+            log_and_print(
+                &format!("No temporary tables to drop: {e}"),
+                &LogType::Info,
+            );
+        }
+
+        // Kill sleeping connections older than 1 hour
+        const KILL_QUERY: &str = r#"
+            SELECT CONCAT('KILL ', id, ';') AS kill_cmd
+            FROM information_schema.processlist
+            WHERE command = 'Sleep' AND time > 3600
+        "#;
+
+        match sqlx::query(KILL_QUERY).fetch_all(pool).await {
+            Ok(rows) => {
+                for row in rows {
+                    let kill_cmd: String = row.get("kill_cmd");
+                    if let Err(e) = pool.execute(kill_cmd.as_str()).await {
+                        log_and_print(
+                            &format!("Error killing connection: {e}"),
+                            &LogType::Warning,
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                log_and_print(
+                    &format!("Error fetching sleeping connections: {e}"),
+                    &LogType::Info,
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// OPTIMIZE TABLE - combines defragmentation, analyze, and repair
+    #[inline]
+    async fn optimize_all_tables(&self, pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        let all_tables: Vec<MySqlRow> = self.get_tables_from_schema(pool).await?;
+
+        for row in &all_tables {
+            let table_name: String = row.get("all_tables");
+            let optimize_sql = format!("OPTIMIZE TABLE {table_name}");
+
+            if let Err(e) = pool.execute(optimize_sql.as_str()).await {
+                log_and_print(
+                    &format!("Error optimizing table {table_name}: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Flush caches and buffers (one-shot operation)
+    #[inline]
+    async fn flush_caches(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        const FLUSH_COMMANDS: [&str; 8] = [
+            "FLUSH TABLES;",          // Close all tables
+            "FLUSH HOSTS;",           // Reset host cache
+            "FLUSH STATUS;",          // Reset status variables
+            "FLUSH USER_RESOURCES;",  // Reset per-user resource limits
+            "FLUSH QUERY CACHE;",     // Clear the query cache (if enabled)
+            "RESET QUERY CACHE;",     // Reset query cache memory
+            "FLUSH PRIVILEGES;",      // Reload privilege tables
+            "FLUSH LOGS;",            // Flush all logs
         ];
 
-        for sql in &SQL_TO_EXECUTE {
-            if let Err(e) = pool.execute(*sql).await {
-                log_and_print(&format!("Error executing {sql}: {e}"), &LogType::Error);
+        for cmd in &FLUSH_COMMANDS {
+            if let Err(e) = pool.execute(*cmd).await {
+                log_and_print(
+                    &format!("Error executing {cmd}: {e}"),
+                    &LogType::Warning,
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Purge old logs (binary logs and slow query logs)
+    #[inline]
+    async fn purge_logs(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        // Purge binary logs older than 7 days
+        const PURGE_BINARY: &str = "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 7 DAY)";
+        if let Err(e) = pool.execute(PURGE_BINARY).await {
+            log_and_print(
+                &format!("Error purging binary logs: {e}"),
+                &LogType::Info,
+            );
+        }
+
+        // Truncate slow query log table if it exists
+        const TRUNCATE_SLOW_LOG: &str = "TRUNCATE TABLE mysql.slow_log";
+        if let Err(e) = pool.execute(TRUNCATE_SLOW_LOG).await {
+            log_and_print(
+                &format!("Slow query log table not available: {e}"),
+                &LogType::Info,
+            );
+        }
+
+        // Truncate general log table if it exists
+        const TRUNCATE_GENERAL_LOG: &str = "TRUNCATE TABLE mysql.general_log";
+        if let Err(e) = pool.execute(TRUNCATE_GENERAL_LOG).await {
+            log_and_print(
+                &format!("General log table not available: {e}"),
+                &LogType::Info,
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Reset performance schema and statistics
+    #[inline]
+    async fn reset_statistics(pool: &Pool<MySql>) -> Result<(), Box<dyn Error>> {
+        // Reset performance schema statistics
+        const RESET_COMMANDS: [&str; 3] = [
+            "TRUNCATE TABLE performance_schema.events_statements_summary_by_digest",
+            "TRUNCATE TABLE performance_schema.events_waits_summary_global_by_event_name",
+            "TRUNCATE TABLE performance_schema.file_summary_by_instance",
+        ];
+
+        for cmd in &RESET_COMMANDS {
+            if let Err(e) = pool.execute(*cmd).await {
+                log_and_print(
+                    &format!("Performance schema table not available: {e}"),
+                    &LogType::Info,
+                );
             }
         }
 
@@ -254,7 +381,7 @@ mod tests {
         assert_eq!(maria_config.config.host, "localhost");
         assert_eq!(maria_config.config.port, "3306");
         assert_eq!(maria_config.config.username, "root");
-        assert_eq!(maria_config.config.password, "password");
+        assert_eq!(maria_config.config.password, Some("password".to_string()));
         assert_eq!(maria_config.config.schema, "test");
     }
 

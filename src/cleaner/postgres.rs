@@ -396,7 +396,7 @@ mod tests {
         assert_eq!(postgres_config.config.host, "localhost");
         assert_eq!(postgres_config.config.port, "5432");
         assert_eq!(postgres_config.config.username, "root");
-        assert_eq!(postgres_config.config.password, "password");
+        assert_eq!(postgres_config.config.password, Some("password".to_string()));
         assert_eq!(postgres_config.config.schema, "test");
     }
 

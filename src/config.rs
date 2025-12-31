@@ -1,12 +1,13 @@
 use crate::colors::{RED, RESET};
 use serde::{Deserialize, Deserializer};
+use std::env;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
 
 /// Represents the database connection engine type.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[repr(u8)]
 pub enum ConnectionEngine {
     Postgres,
@@ -41,19 +42,91 @@ impl Display for ConnectionEngine {
     }
 }
 
-/// Represents the configuration for the database connection.
-#[derive(Deserialize, Debug)]
+/// Represents the configuration for a single database connection.
+#[derive(Deserialize, Debug, Clone)]
 #[must_use]
-pub struct Config {
+pub struct DatabaseConfig {
+    pub name: Option<String>,
     pub driver: ConnectionEngine,
     pub host: String,
     pub port: String,
     pub username: String,
-    pub password: String,
+    #[serde(default)]
+    pub password: Option<String>,
+    #[serde(default)]
+    pub password_env: Option<String>,
     pub schema: String,
 }
 
-impl Config {
+/// Main configuration structure supporting multiple databases
+#[derive(Deserialize, Debug)]
+#[must_use]
+pub struct CleanerConfig {
+    pub databases: Vec<DatabaseConfig>,
+    #[serde(default)]
+    pub dry_run: bool,
+    #[serde(default = "default_require_confirmation")]
+    pub require_confirmation: bool,
+}
+
+fn default_require_confirmation() -> bool {
+    true
+}
+
+/// Legacy Config type alias for compatibility with cleaners
+pub type Config = DatabaseConfig;
+
+impl DatabaseConfig {
+    /// Get the password from config or environment variable
+    pub fn get_password(&self) -> Result<String, Error> {
+        if let Some(ref password) = self.password {
+            return Ok(password.clone());
+        }
+
+        if let Some(ref env_var) = self.password_env {
+            return env::var(env_var).map_err(|_| {
+                Error::new(
+                    ErrorKind::NotFound,
+                    format!(
+                        "{RED}Environment variable {env_var} not found for database{RESET}"
+                    ),
+                )
+            });
+        }
+
+        Err(Error::new(
+            ErrorKind::InvalidInput,
+            format!("{RED}No password or password_env specified{RESET}"),
+        ))
+    }
+
+    /// Validate the configuration
+    pub fn validate(&self) -> Result<(), Error> {
+        let validations = [
+            (self.port.parse::<i32>().is_err(), "Port must be a number"),
+            (self.host.is_empty(), "Host must not be empty"),
+            (self.username.is_empty(), "Username must not be empty"),
+            (self.schema.is_empty(), "Schema must not be empty"),
+            (self.driver == ConnectionEngine::Invalid, "Invalid driver"),
+        ];
+
+        for (condition, message) in validations {
+            if condition {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("{RED}{message}{RESET}"),
+                ));
+            }
+        }
+
+        // Validate password is available
+        self.get_password()?;
+
+        Ok(())
+    }
+}
+
+impl CleanerConfig {
     /// Load the configuration file
     pub fn from_file(file_path: &str) -> Result<Self, Error> {
         let path: &Path = Path::new(file_path);
@@ -65,31 +138,34 @@ impl Config {
         }
         let file: File = File::open(file_path)?;
         let reader: BufReader<File> = BufReader::new(file);
-        let config: Self = serde_json::from_reader(reader)?;
 
-        Self::check_config(&config).expect("Invalid configuration file");
+        let config: CleanerConfig = serde_json::from_reader(reader)?;
+        config.validate()?;
 
         Ok(config)
     }
 
-    /// Check if the configuration is valid
-    pub fn check_config(config: &Self) -> Result<(), Error> {
-        let validations = [
-            (config.port.parse::<i32>().is_err(), "Port must be a number"),
-            (config.host.is_empty(), "Host must not be empty"),
-            (config.username.is_empty(), "Username must not be empty"),
-            (config.schema.is_empty(), "Schema must not be empty"),
-            (config.driver == ConnectionEngine::Invalid, "Invalid driver"),
-        ];
+    /// Validate all database configurations
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.databases.is_empty() {
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("{RED}No databases configured{RESET}"),
+            ));
+        }
 
-        for (condition, message) in validations {
-            if condition {
+        for (i, db_config) in self.databases.iter().enumerate() {
+            let default_name = format!("Database #{}", i + 1);
+            let db_name = db_config.name.as_ref().unwrap_or(&default_name);
+
+            if let Err(e) = db_config.validate() {
                 return Err(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("{RED}{message}{RESET}"),
+                    format!("{RED}Invalid config for {db_name}: {e}{RESET}"),
                 ));
             }
         }
+
         Ok(())
     }
 }
@@ -124,108 +200,121 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_config_check_valid() {
-        let config = Config {
+    async fn test_database_config_validate_valid() {
+        let config = DatabaseConfig {
+            name: Some("Test DB".to_string()),
             driver: ConnectionEngine::Postgres,
             host: "localhost".to_string(),
             port: "5432".to_string(),
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             schema: "public".to_string(),
         };
-        assert!(Config::check_config(&config).is_ok());
+        assert!(config.validate().is_ok());
     }
 
     #[tokio::test]
-    async fn test_config_check_invalid_port() {
-        let config = Config {
+    async fn test_database_config_validate_invalid_port() {
+        let config = DatabaseConfig {
+            name: None,
             driver: ConnectionEngine::Postgres,
             host: "localhost".to_string(),
             port: "not_a_number".to_string(),
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             schema: "public".to_string(),
         };
-        assert!(Config::check_config(&config).is_err());
+        assert!(config.validate().is_err());
     }
 
     #[tokio::test]
-    async fn test_config_check_invalid_driver() {
-        let config = Config {
+    async fn test_database_config_validate_invalid_driver() {
+        let config = DatabaseConfig {
+            name: None,
             driver: ConnectionEngine::Invalid,
             host: "localhost".to_string(),
             port: "5432".to_string(),
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             schema: "public".to_string(),
         };
-        assert!(Config::check_config(&config).is_err());
+        assert!(config.validate().is_err());
     }
 
     #[tokio::test]
-    async fn test_config_from_file() {
-        const CONFIG_TEST_FILE: &str = "test_config_from_file.json";
+    async fn test_cleaner_config_from_file() {
+        const CONFIG_TEST_FILE: &str = "test_cleaner_config_from_file.json";
 
         generate_test_file_config(CONFIG_TEST_FILE);
 
-        let loaded_config: Config = Config::from_file(CONFIG_TEST_FILE).unwrap();
+        let loaded_config: CleanerConfig = CleanerConfig::from_file(CONFIG_TEST_FILE).unwrap();
 
-        assert_eq!(loaded_config.driver, ConnectionEngine::Mysql);
-        assert_eq!(loaded_config.host, "localhost");
-        assert_eq!(loaded_config.port, "3306");
-        assert_eq!(loaded_config.username, "root");
-        assert_eq!(loaded_config.password, "password");
-        assert_eq!(loaded_config.schema, "test");
+        assert_eq!(loaded_config.databases.len(), 1);
+        assert_eq!(loaded_config.databases[0].driver, ConnectionEngine::Mysql);
+        assert_eq!(loaded_config.databases[0].host, "localhost");
+        assert_eq!(loaded_config.databases[0].port, "3306");
 
         delete_test_file_config(CONFIG_TEST_FILE);
     }
 
     #[tokio::test]
-    async fn test_config_struct() {
-        let test_config: Config = get_test_config(ConnectionEngine::Mysql, "3306");
+    async fn test_database_config_struct() {
+        let test_config: DatabaseConfig = get_test_config(ConnectionEngine::Mysql, "3306");
         assert_eq!(test_config.driver, ConnectionEngine::Mysql);
         assert_eq!(test_config.host, "localhost");
         assert_eq!(test_config.port, "3306");
         assert_eq!(test_config.username, "root");
-        assert_eq!(test_config.password, "password");
+        assert_eq!(test_config.password, Some("password".to_string()));
         assert_eq!(test_config.schema, "test");
     }
 
     #[tokio::test]
-    async fn test_check_config_multiple_drivers() {
+    async fn test_validate_multiple_drivers() {
         assert!(
-            Config::check_config(&Config {
+            DatabaseConfig {
+                name: None,
                 driver: ConnectionEngine::Postgres,
                 host: String::from("localhost"),
                 port: String::from("3306"),
                 username: String::from("root"),
-                password: String::from("password"),
+                password: Some(String::from("password")),
+                password_env: None,
                 schema: String::from("test"),
-            })
+            }
+            .validate()
             .is_ok()
         );
 
         assert!(
-            Config::check_config(&Config {
+            DatabaseConfig {
+                name: None,
                 driver: ConnectionEngine::MariaDB,
                 host: String::from("localhost"),
                 port: String::from("3306"),
                 username: String::from("root"),
-                password: String::from("password"),
+                password: Some(String::from("password")),
+                password_env: None,
                 schema: String::from("test"),
-            })
+            }
+            .validate()
             .is_ok()
         );
 
         assert!(
-            Config::check_config(&Config {
+            DatabaseConfig {
+                name: None,
                 driver: ConnectionEngine::Invalid,
                 host: String::from("localhost"),
                 port: String::from("3306"),
                 username: String::from("root"),
-                password: String::from("password"),
+                password: Some(String::from("password")),
+                password_env: None,
                 schema: String::from("test"),
-            })
+            }
+            .validate()
             .is_err()
         );
     }
@@ -233,12 +322,16 @@ pub(crate) mod tests {
     fn generate_test_file_config(file_name: &str) {
         let mut file: File = File::create(file_name).unwrap();
         let data: &str = r#"{
-        "driver": "mysql",
-        "host": "localhost",
-        "port": "3306",
-        "username": "root",
-        "password": "password",
-        "schema": "test"
+        "databases": [
+            {
+                "driver": "mysql",
+                "host": "localhost",
+                "port": "3306",
+                "username": "root",
+                "password": "password",
+                "schema": "test"
+            }
+        ]
     }"#;
 
         file.write_all(data.as_bytes()).unwrap();
@@ -253,13 +346,15 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn get_test_config(driver: ConnectionEngine, port: &str) -> Config {
-        Config {
+    pub fn get_test_config(driver: ConnectionEngine, port: &str) -> DatabaseConfig {
+        DatabaseConfig {
+            name: None,
             driver,
             host: String::from("localhost"),
             port: String::from(port),
             username: String::from("root"),
-            password: String::from("password"),
+            password: Some(String::from("password")),
+            password_env: None,
             schema: String::from("test"),
         }
     }

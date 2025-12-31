@@ -15,14 +15,15 @@ pub fn merge_schema(schema: &str) -> String {
 
 /// Get the url connection string based on the driver type
 pub fn get_url_connection(config: &Config, schema: &str) -> Result<String, Box<dyn Error>> {
+    let password = config.get_password()?;
     match config.driver {
         ConnectionEngine::Mysql | ConnectionEngine::MariaDB => Ok(format!(
             "mysql://{}:{}@{}:{}/",
-            config.username, config.password, config.host, config.port
+            config.username, password, config.host, config.port
         )),
         ConnectionEngine::Postgres => Ok(format!(
             "postgresql://{}:{}@{}:{}/{}",
-            config.username, config.password, config.host, config.port, schema
+            config.username, password, config.host, config.port, schema
         )),
         ConnectionEngine::Invalid => Err("Invalid driver".into()),
     }
@@ -102,11 +103,13 @@ mod tests {
     #[tokio::test]
     async fn test_get_url_connection_mysql() {
         let config = Config {
+            name: None,
             driver: ConnectionEngine::Mysql,
             host: "localhost".to_string(),
             port: "3306".to_string(),
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             schema: "test".to_string(),
         };
         let url = get_url_connection(&config, "test").unwrap();
@@ -116,11 +119,13 @@ mod tests {
     #[tokio::test]
     async fn test_get_url_connection_postgres() {
         let config = Config {
+            name: None,
             driver: ConnectionEngine::Postgres,
             host: "localhost".to_string(),
             port: "5432".to_string(),
             username: "user".to_string(),
-            password: "pass".to_string(),
+            password: Some("pass".to_string()),
+            password_env: None,
             schema: "public".to_string(),
         };
         let url = get_url_connection(&config, "public").unwrap();
