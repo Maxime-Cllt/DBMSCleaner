@@ -1,11 +1,29 @@
 <div align="center">
-    <h1>DBMSCleaner</h1>
+    <h1>🗄️ DBMSCleaner</h1>
+    <p><i>High-performance database optimization tool built with Rust</i></p>
 </div>
 
 <div align="center">
-    <img src="https://img.shields.io/badge/Rust-dea584?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
-    <img src="https://img.shields.io/badge/Database-Cleaner-53a863?style=for-the-badge" alt="Database Cleaner" />
-    <img src="https://img.shields.io/badge/Version-1.0.3-informational?style=for-the-badge" alt="Version" />
+
+![Rust](https://img.shields.io/badge/Rust-dea584?style=for-the-badge&logo=rust&logoColor=white)
+![Version](https://img.shields.io/badge/version-1.0.4-blue?style=for-the-badge)
+
+</div>
+
+<div align="center">
+
+**Supported Databases**
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
+
+**Platform Support**
+
+![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+
 </div>
 
 ## 📖 Overview
@@ -31,25 +49,7 @@ all major platforms.
 
 ---
 
-## 🗄️ Supported Databases
-
-<div align="center">
-    <img src="https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
-    <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
-    <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-</div>
-
----
-
-## 💻 Platforms & Requirements
-
-<div align="center">
-    <img src="https://img.shields.io/badge/OS-MacOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="MacOS" />
-    <img src="https://img.shields.io/badge/OS-Linux-228B22?style=for-the-badge&logo=linux&logoColor=white" alt="Linux" />
-    <img src="https://img.shields.io/badge/OS-Windows-0078d4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
-</div>
-
-### 📋 Prerequisites
+## 📋 Prerequisites
 
 - **Rust Compiler** (Install via [Rustup](https://rustup.rs/))
 - **Cargo Package Manager** (Installed with Rust)
@@ -76,27 +76,68 @@ cargo build --release
 
 ### 3. Configure the Connection
 
-Create a file named `cleaner.json` in the same directory as the compiled program with the following content:
+Create a file named `cleaner.json` in the same directory as the compiled program. DBMSCleaner supports multiple
+databases in a single configuration file:
+
+**Multi-Database Configuration (Recommended):**
 
 ```json
 {
-  "driver": "mysql|mariadb|postgres",
-  "host": "localhost",
-  "port": "3306",
-  "username": "root",
-  "password": "",
-  "schema": "test"
+  "databases": [
+    {
+      "name": "Production PostgreSQL",
+      "driver": "postgres",
+      "host": "localhost",
+      "port": "5432",
+      "username": "postgres",
+      "password_env": "POSTGRES_PASSWORD",
+      "schema": "public"
+    },
+    {
+      "name": "Analytics MySQL",
+      "driver": "mysql",
+      "host": "localhost",
+      "port": "3306",
+      "username": "root",
+      "password_env": "MYSQL_PASSWORD",
+      "schema": "analytics"
+    }
+  ],
+  "dry_run": false,
+  "require_confirmation": true
 }
 ```
 
-You can also include mutliple schemas in the `schema` field, separated by a comma or use the `*` keyword to clean all
-schemas (except system schemas).
+**Security Features:**
+
+- 🔐 Use `password_env` to reference environment variables instead of hardcoding passwords
+- ⚠️ `require_confirmation` asks for approval before running (set to `false` for automation)
+- 🔍 `dry_run` mode previews operations without executing them
+
+**Multiple Schemas:**
+You can include multiple schemas separated by commas or use `*` to clean all schemas (except system schemas):
 
 ```json
 "schema": "test1,test2,test3"
 ```
 
+For detailed configuration options, see [README_CONFIG.md](README_CONFIG.md)
+
 ### 4. Run the Program
+
+**Set environment variables (if using `password_env`):**
+
+```bash
+# Linux/macOS
+export POSTGRES_PASSWORD="your_secure_password"
+export MYSQL_PASSWORD="your_mysql_password"
+
+# Windows (PowerShell)
+$env:POSTGRES_PASSWORD="your_secure_password"
+$env:MYSQL_PASSWORD="your_mysql_password"
+```
+
+**Execute the cleaner:**
 
 #### For MacOS & Linux:
 
@@ -117,7 +158,6 @@ schemas (except system schemas).
 ### Unit Tests available
 
 To ensure the reliability of the DBMS Cleaner, unit tests are included. You can run the tests using Cargo:
-
 
 ```bash
 cargo test
@@ -141,7 +181,6 @@ the cleaning process.
 <div align="center">
     <img src="assets/Graph.png" width="50%" height="50%" alt="Graph" />
 </div>
-
 
 ## 🔗 See Also
 
