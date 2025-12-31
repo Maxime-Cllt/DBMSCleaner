@@ -1,6 +1,6 @@
 [package]
 name = "DBMSCleaner"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2024"
 repository = "https://github.com/Maxime-Cllt/DBMSCleaner.git"
 description = "A simple tool to clean your DMBS in Rust"

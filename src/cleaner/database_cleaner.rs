@@ -1,4 +1,4 @@
-use crate::structs::config::Config;
+use crate::config::Config;
 use async_trait::async_trait;
 use std::error::Error;
 
@@ -23,6 +23,7 @@ pub trait DatabaseCleaner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ConnectionEngine;
 
     #[allow(dead_code)]
     struct DummyCleaner(Config);
@@ -41,7 +42,7 @@ mod tests {
     #[tokio::test]
     async fn test_dummy_cleaner() {
         let config = Config {
-            driver: crate::enums::connection_engine::ConnectionEngine::Invalid,
+            driver: ConnectionEngine::Invalid,
             username: "user".to_string(),
             password: "pass".to_string(),
             host: "localhost".to_string(),

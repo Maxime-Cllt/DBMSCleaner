@@ -1,11 +1,9 @@
+use libcleaner::cleaner::database_cleaner::DatabaseCleaner;
 use libcleaner::cleaner::mysql::MySQLCleaner;
 use libcleaner::cleaner::postgres::PostgresCleaner;
-use libcleaner::enums::connection_engine::ConnectionEngine;
-use libcleaner::enums::log_type::LogType;
-use libcleaner::structs::config::Config;
-use libcleaner::structs::logger::log_and_print;
-use libcleaner::traits::database_cleaner::DatabaseCleaner;
-use libcleaner::utils::constant::{GREEN, RESET};
+use libcleaner::colors::{GREEN, RESET};
+use libcleaner::config::{Config, ConnectionEngine};
+use libcleaner::logger::{log_and_print, LogType};
 use std::time::Instant;
 
 #[tokio::main]

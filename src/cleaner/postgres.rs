@@ -1,9 +1,8 @@
-use crate::enums::log_type::LogType;
-use crate::structs::config::Config;
-use crate::structs::logger::log_and_print;
-use crate::traits::database_cleaner::DatabaseCleaner;
-use crate::utils::constant::{BLUE, RESET};
-use crate::utils::libcleaner::{get_url_connection, log_report, merge_schema};
+use crate::cleaner::database_cleaner::DatabaseCleaner;
+use crate::colors::{BLUE, RESET};
+use crate::config::Config;
+use crate::helpers::{get_url_connection, log_report, merge_schema};
+use crate::logger::{log_and_print, LogType};
 use async_trait::async_trait;
 use num_format::{Locale, ToFormattedString};
 use sqlx::postgres::PgRow;
@@ -208,5 +207,52 @@ impl PostgresCleaner {
                 log_and_print(&format!("Error executing query: {e}"), &LogType::Error);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{ConnectionEngine, tests::get_test_config};
+
+    #[tokio::test]
+    async fn test_postgres_struct() {
+        let config: Config = get_test_config(ConnectionEngine::Postgres, "5432");
+        let postgres_config: PostgresCleaner = PostgresCleaner::new(config);
+        assert_eq!(postgres_config.config.driver, ConnectionEngine::Postgres);
+        assert_eq!(postgres_config.config.host, "localhost");
+        assert_eq!(postgres_config.config.port, "5432");
+        assert_eq!(postgres_config.config.username, "root");
+        assert_eq!(postgres_config.config.password, "password");
+        assert_eq!(postgres_config.config.schema, "test");
+    }
+
+    #[tokio::test]
+    async fn test_get_all_postgres_tables_sql() {
+        let schema: String = String::from("test");
+        let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
+        let true_sql: String =
+            String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test');");
+        assert_eq!(tested_sql, true_sql);
+
+        let schema: String = String::from("test,test1");
+        let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
+        let true_sql: String = String::from(
+            "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test','test1');",
+        );
+        assert_eq!(tested_sql, true_sql);
+
+        let schema: String = String::from("test,test1,test2");
+        let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
+        let true_sql: String = String::from(
+            "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname IN ('test','test1','test2');",
+        );
+        assert_eq!(tested_sql, true_sql);
+
+        let schema: String = String::from("*");
+        let tested_sql: String = PostgresCleaner::get_all_postgres_tables_sql(&schema);
+        let true_sql: String =
+            String::from("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';");
+        assert_eq!(tested_sql, true_sql);
     }
 }

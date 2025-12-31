@@ -1,8 +1,5 @@
-pub mod traits;
-pub mod utils;
 pub mod cleaner;
-pub mod enums;
-pub mod structs;
-
-#[cfg(test)]
-mod tests;
+pub mod colors;
+pub mod config;
+pub mod helpers;
+pub mod logger;
